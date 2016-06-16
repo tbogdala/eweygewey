@@ -5,8 +5,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"runtime"
+	"time"
 
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
 
@@ -25,10 +25,10 @@ const (
 
 var (
 	glfwWindow *glfw.Window
-	gfx   graphics.GraphicsProvider
-	uiman *gui.Manager
+	gfx        graphics.GraphicsProvider
+	uiman      *gui.Manager
 
-	thisFrame		time.Time
+	thisFrame        time.Time
 	lastFrame        time.Time
 	frameCounterTime time.Time
 	frameCounter     int
@@ -140,7 +140,7 @@ func main() {
 
 	// create the test window for widgets
 	mainWindow = uiman.NewWindow(0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {
-		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta / 1000.0))
+		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
 

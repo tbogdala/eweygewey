@@ -76,9 +76,7 @@ type Manager struct {
 	indexBuffer []uint32
 	indexVBO    graphics.Buffer
 	vao         uint32
-	faceCount uint32
-
-
+	faceCount   uint32
 }
 
 // NewManager is the constructor for the Manager type that will create

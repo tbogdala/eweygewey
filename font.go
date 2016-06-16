@@ -121,7 +121,7 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 	// NOTE: always disabled for now since it causes a stack overflow error
 	//c.SetHinting(font.HintingFull)
 
-    var fx, fy int
+	var fx, fy int
 	for _, ch := range glyphs {
 		index := ttfData.Index(ch)
 		metricH := ttfData.HMetric(scale, index)
@@ -130,7 +130,7 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 		fxGW := fx * glyphWidth
 		fyGH := fy * glyphHeight
 
-        f.locations[ch] = runeData{
+		f.locations[ch] = runeData{
 			fxGW, fyGH,
 			int(metricH.AdvanceWidth) >> 6, int(metricH.LeftSideBearing) >> 6,
 			int(metricV.AdvanceHeight) >> 6, int(metricV.TopSideBearing) >> 6,
@@ -193,10 +193,10 @@ func (f *Font) GetRenderSize(msg string) (int, int, int) {
 		// get the rune data
 		chData := f.locations[ch]
 
-        w += chData.advanceWidth
-        if chData.advanceHeight > h {
-            h = chData.advanceHeight
-        }
+		w += chData.advanceWidth
+		if chData.advanceHeight > h {
+			h = chData.advanceHeight
+		}
 	}
 
 	return w, f.GlyphHeight, h
@@ -205,12 +205,12 @@ func (f *Font) GetRenderSize(msg string) (int, int, int) {
 // TypeRenderData is a structure containing the raw OpenGL VBO data needed
 // to render a text string for a given texture.
 type TextRenderData struct {
-    ComboBuffer []float32 // the combo VBO data (vert/uv/color)
-    IndexBuffer []uint32 // the element index VBO data
-    Faces int // the number of faces in the text string
-    Width float32 // the width in pixels of the text string
-    Height float32 // the height in pixels of the text string
-    AdvanceHeight float32 // the amount of pixels to move the pen in the verticle direction
+	ComboBuffer   []float32 // the combo VBO data (vert/uv/color)
+	IndexBuffer   []uint32  // the element index VBO data
+	Faces         int       // the number of faces in the text string
+	Width         float32   // the width in pixels of the text string
+	Height        float32   // the height in pixels of the text string
+	AdvanceHeight float32   // the amount of pixels to move the pen in the verticle direction
 }
 
 // CreateText makes a new renderable object from the supplied string
@@ -235,7 +235,7 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 
 		// setup the coordinates for ther vetexes
 		x0 := penX
-		y0 := penY - float32(f.GlyphHeight - chData.topSideBearing)
+		y0 := penY - float32(f.GlyphHeight-chData.topSideBearing)
 		x1 := x0 + float32(f.GlyphWidth)
 		y1 := y0 + float32(f.GlyphHeight)
 		s0 := chData.uvMinX
@@ -281,14 +281,14 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 		penX += float32(chData.advanceWidth)
 	}
 
-	return TextRenderData {
-        ComboBuffer: comboBuffer,
-        IndexBuffer: indexBuffer,
-        Faces: msgLength * 2,
-        Width: float32(dimX),
-        Height: float32(dimY),
-        AdvanceHeight: float32(advH),
-    }
+	return TextRenderData{
+		ComboBuffer:   comboBuffer,
+		IndexBuffer:   indexBuffer,
+		Faces:         msgLength * 2,
+		Width:         float32(dimX),
+		Height:        float32(dimY),
+		AdvanceHeight: float32(advH),
+	}
 }
 
 // loadRGBAToTexture takes a byte slice and throws it into an OpenGL texture.
