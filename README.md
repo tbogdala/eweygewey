@@ -113,5 +113,5 @@ Fonts in the `examples/assets` directory are licensed under the [SIL OFL][sil_of
 [imgui]: https://github.com/ocornut/imgui
 [sil_ofl]: http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL
 [license-link]: https://raw.githubusercontent.com/tbogdala/eweygewey/master/LICENSE
-[basic_ss]: https://raw.githubusercontent.com/tbogdala/cubez/master/examples/screenshots/basic_ss_0.jpg
+[basic_ss]: https://github.com/tbogdala/eweygewey/blob/master/examples/screenshots/basic_ss_0.jpg
 [basic_example]: https://raw.githubusercontent.com/tbogdala/cubez/master/examples/basic
