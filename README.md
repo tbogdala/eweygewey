@@ -4,6 +4,8 @@ EweyGewey
 EweyGewey is an OpenGL GUI library written in the [Go][golang] programming language
 that is designed to be integrated easily into an OpenGL application.
 
+The design of the library is heavily inspired by [imgui][imgui].
+
 UNDER CONSTRUCTION
 ==================
 
@@ -110,6 +112,8 @@ Fonts in the `examples/assets` directory are licensed under the [SIL OFL][sil_of
 [glfw-go]: https://github.com/go-gl/glfw
 [mgl]: https://github.com/go-gl/mathgl
 [ftgo]: https://github.com/golang/freetype
+[go-gl]: https://github.com/go-gl/glow
+[opengles2]: https://github.com/remogatto/opengles2
 [imgui]: https://github.com/ocornut/imgui
 [sil_ofl]: http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL
 [license-link]: https://raw.githubusercontent.com/tbogdala/eweygewey/master/LICENSE
