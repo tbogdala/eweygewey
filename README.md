@@ -76,12 +76,6 @@ Current Features
     * Text
     * Buttons
 
-examples
---------
-
-Currently there is only one example, but all of the examples will likely use
-the `exampleapp.go`, "engine-in-a-file" support code found in the example directory.
-Using this just provides some quick scaffolding
 
 TODO
 ----
