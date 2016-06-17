@@ -132,8 +132,9 @@ func main() {
 		wnd.StartRow()
 		wnd.Button("Show Cursor Pos")
 		wnd.Button("Test 1")
+
 		wnd.StartRow()
-		wnd.Button("Test 2")
+		wnd.SliderFloat("Bogus", &mainWindow.Width, 0.0, 1.0)
 	})
 	mouseTestWindow.ShowTitleBar = false
 	mouseTestWindow.IsMoveable = false

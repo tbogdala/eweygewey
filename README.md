@@ -75,15 +75,13 @@ Current Features
 * Widgets:
     * Text
     * Buttons
-
+    * Slider
 
 TODO
 ----
 
 The following need to be addressed in order to start releases:
 
-* widgets use a lot of pixel sizing where windows use relative sizing; this
-  creates a problem where widgets don't resize to the new window space appropriately.
 * more widgets:
     * single/multi-line text editbox
     * combobox

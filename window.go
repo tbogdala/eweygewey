@@ -101,6 +101,15 @@ func (wnd *Window) construct() {
 	}
 }
 
+// GetDisplaySize returns four values: the x and y positions of the window
+// on the screen in display-space and then the width and height of the window
+// in display-space values.
+func (wnd *Window) GetDisplaySize() (float32, float32, float32, float32) {
+	winxDC, winyDC := wnd.Owner.ScreenToDisplay(wnd.Location[0], wnd.Location[1])
+	winwDC, winhDC := wnd.Owner.ScreenToDisplay(wnd.Width, wnd.Height)
+	return winxDC, winyDC, winwDC, winhDC
+}
+
 // buildFrame builds the background for the window
 func (wnd *Window) buildFrame() {
 	// reset the cursor for the window
@@ -114,9 +123,7 @@ func (wnd *Window) buildFrame() {
 		return
 	}
 
-	winxDC, winyDC := wnd.Owner.ScreenToDisplay(wnd.Location[0], wnd.Location[1])
-	winwDC, winhDC := wnd.Owner.ScreenToDisplay(wnd.Width, wnd.Height)
-	_ = winhDC
+	winxDC, winyDC, winwDC, winhDC := wnd.GetDisplaySize()
 
 	// how big should the title bar be?
 	titleString := " "
@@ -148,9 +155,7 @@ func (wnd *Window) buildFrame() {
 // ContainsPosition returns true if the position passed in is contained within
 // the window's space.
 func (wnd *Window) ContainsPosition(x, y float32) bool {
-	locXDC, locYDC := wnd.Owner.ScreenToDisplay(wnd.Location[0], wnd.Location[1])
-	wndWDC, wndHDC := wnd.Owner.ScreenToDisplay(wnd.Width, wnd.Height)
-
+	locXDC, locYDC, wndWDC, wndHDC := wnd.GetDisplaySize()
 	if x > locXDC && x < locXDC+wndWDC && y < locYDC && y > locYDC-wndHDC {
 		return true
 	}
@@ -221,8 +226,8 @@ func (wnd *Window) Button(text string) (bool, error) {
 
 	// calculate the size necessary for the widget
 	dimX, dimY, _ := font.GetRenderSize(text)
-	buttonW := float32(dimX) + style.ButtonPadding[0] + style.ButtonPadding[1]
-	buttonH := float32(dimY) + style.ButtonPadding[2] + style.ButtonPadding[3]
+	buttonW := dimX + style.ButtonPadding[0] + style.ButtonPadding[1]
+	buttonH := dimY + style.ButtonPadding[2] + style.ButtonPadding[3]
 
 	// set a default color for the button
 	bgColor := style.ButtonColor
@@ -255,4 +260,86 @@ func (wnd *Window) Button(text string) (bool, error) {
 	wnd.nextRowCursorOffset = buttonH + style.ButtonMargin[2] + style.ButtonMargin[3]
 
 	return buttonPressed, nil
+}
+
+func (wnd *Window) SliderFloat(label string, value *float32, min, max float32) error {
+	style := DefaultStyle
+
+	// get the font for the text
+	font := wnd.Owner.GetFont(style.FontName)
+	if font == nil {
+		return fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+	}
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += style.SliderMargin[0]
+	pos[1] -= style.SliderMargin[2]
+
+	// calculate the size necessary for the widget
+	_, _, wndWidth, _ := wnd.GetDisplaySize()
+	valueString := fmt.Sprintf(style.SliderFloatFormat, *value)
+	dimX, dimY, _ := font.GetRenderSize(valueString)
+	sliderW := wndWidth - style.WindowPadding[0] - style.WindowPadding[1] - style.SliderMargin[0] - style.SliderMargin[1]
+	sliderH := dimY + style.SliderPadding[2] + style.SliderPadding[3]
+
+	// set a default color for the background
+	bgColor := style.SliderBgColor
+	sliderPressed := false
+
+	// test to see if the mouse is inside the widget
+	mx, my := wnd.Owner.GetMousePosition()
+	if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
+		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+		if lmbStatus != MouseUp {
+			sliderPressed = true
+		}
+	}
+
+	// calculate how much of the slider control is available to the cursor for
+	// movement, which affects the scale of the value to edit.
+	sliderRangeW := sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
+	cursorH := sliderH - style.SliderPadding[2] - style.SliderPadding[3]
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		moveRatio := mouseDeltaX / sliderRangeW
+		delta := moveRatio * max
+		tmp := *value + delta
+		if tmp > max {
+			tmp = max
+		} else if tmp < min {
+			tmp = min
+		}
+		*value = tmp
+		// re-render the string
+		valueString = fmt.Sprintf(style.SliderFloatFormat, *value)
+	}
+
+	// render the widget background
+	wnd.Owner.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor)
+
+	// get the position / size for the slider
+	cursorRel := *value
+	cursorRel = (cursorRel - min) / (max - min)
+	cursorPosX := cursorRel*sliderRangeW + style.SliderPadding[0]
+
+	// render the slider cursor
+	wnd.Owner.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
+		pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor)
+
+	// create the text for the slider
+	textPos := pos
+	textPos[0] += style.SliderPadding[0] + (0.5 * sliderW) - (0.5 * dimX)
+	textPos[1] -= style.SliderPadding[2]
+	renderData := font.CreateText(textPos, style.SliderTextColor, valueString)
+	wnd.Owner.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+
+	// advance the cursor for the width of the text widget
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + style.SliderMargin[0] + style.SliderMargin[1]
+	wnd.nextRowCursorOffset = sliderH + style.SliderMargin[2] + style.SliderMargin[3]
+
+	return nil
 }

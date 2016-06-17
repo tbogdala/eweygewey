@@ -192,8 +192,7 @@ func (f *Font) GetCurrentScale() float32 {
 }
 
 // GetRenderSize returns the width and height necessary in pixels for the
-// font to display a string. The third parameter is the advance height the
-// string.
+// font to display a string. The third return value is the advance height the string.
 func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
 	var w, h float32
 

@@ -25,6 +25,13 @@ type Style struct {
 	ButtonMargin      mgl.Vec4 // [left,right,top,bottom] margin values for buttons
 	ButtonPadding     mgl.Vec4 // [left,right,top,bottom] padding values for buttons
 	FontName          string   // font name to use by default
+	SliderBgColor     mgl.Vec4 // slider background color
+	SliderCursorColor mgl.Vec4 // slider cursor color
+	SliderFloatFormat string   // formatting string for the float value in a slider
+	SliderMargin      mgl.Vec4 // margin for the slider text strings
+	SliderPadding     mgl.Vec4 // padding for the slider text strings
+	SliderTextColor   mgl.Vec4 // slider text color
+	SliderCursorWidth float32  // slider cursor width
 	TextColor         mgl.Vec4 // text color
 	TitleBarTextColor mgl.Vec4 // text color
 	TitleBarBgColor   mgl.Vec4 // window background color
@@ -70,6 +77,13 @@ var (
 		ButtonMargin:      mgl.Vec4{2, 2, 4, 4},
 		ButtonPadding:     mgl.Vec4{4, 4, 2, 2},
 		FontName:          "Default",
+		SliderBgColor:     ColorIToV(128, 128, 128, 179),
+		SliderCursorColor: ColorIToV(179, 179, 179, 179),
+		SliderFloatFormat: "%0.3f",
+		SliderMargin:      mgl.Vec4{2, 2, 4, 4},
+		SliderPadding:     mgl.Vec4{2, 2, 2, 2},
+		SliderTextColor:   ColorIToV(230, 230, 230, 255),
+		SliderCursorWidth: 15,
 		TextColor:         ColorIToV(230, 230, 230, 255),
 		TitleBarTextColor: ColorIToV(230, 230, 230, 255),
 		TitleBarBgColor:   ColorIToV(69, 69, 138, 212),

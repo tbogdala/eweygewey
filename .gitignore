@@ -1,3 +1,4 @@
 examples/basicGLFW/*.exe
 examples/basicGLFW/basicGLFW
+examples/basicGLFW/debug
 *.exe
