@@ -89,7 +89,7 @@ func main() {
 
 	// create and initialize the gui Manager
 	uiman = gui.NewManager(gfx)
-	err = uiman.Initialize(gui.VertShader330, gui.FragShader330, w, h)
+	err = uiman.Initialize(gui.VertShader330, gui.FragShader330, w, h, h)
 	if err != nil {
 		panic("Failed to initialize the user interface! " + err.Error())
 	}

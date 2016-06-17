@@ -51,6 +51,13 @@ type Manager struct {
 	// best set to the height of the window.
 	height int32
 
+	// designHeight is the height the UI was designed at. Practically, this
+	// means that text should scale to adjust for resolution changes so that it
+	// has the same height relative to the different resolutions.
+	// E.g. 800x600 and the font glyphs have a height of 30, then adjusting
+	// to 1600x1200 will instruct the package to create text with a height of 60.
+	designHeight int32
+
 	// windows is the slice of known windows to render.
 	windows []*Window
 
@@ -105,7 +112,7 @@ func NewManager(gfx graphics.GraphicsProvider) *Manager {
 
 // Initialize does the setup required for the user interface to draw. This
 // includes heavier operations like compiling shaders.
-func (ui *Manager) Initialize(vertShader, fragShader string, w, h int32) error {
+func (ui *Manager) Initialize(vertShader, fragShader string, w, h, designH int32) error {
 	// compile the shader program from the source provided
 	var err error
 	ui.shader, err = ui.compileShader(vertShader, fragShader)
@@ -119,6 +126,7 @@ func (ui *Manager) Initialize(vertShader, fragShader string, w, h int32) error {
 
 	// set the resolution for the user interface
 	ui.AdviseResolution(w, h)
+	ui.designHeight = designH
 
 	return nil
 }
@@ -127,6 +135,11 @@ func (ui *Manager) Initialize(vertShader, fragShader string, w, h int32) error {
 func (ui *Manager) AdviseResolution(w int32, h int32) {
 	ui.width = w
 	ui.height = h
+}
+
+// GetDesignHeight returns the normalized height for the UI.
+func (ui *Manager) GetDesignHeight() int32 {
+	return ui.designHeight
 }
 
 // GetResolution returns the width and height of the user interface.

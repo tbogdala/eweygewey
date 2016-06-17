@@ -183,26 +183,39 @@ func (f *Font) Destroy() {
 	f.Owner.gfx.DeleteTexture(f.Texture)
 }
 
+// GetCurrentScale returns the scale value for the font based on the current
+// Manager's resolution vs the resolution the UI was designed for.
+func (f *Font) GetCurrentScale() float32 {
+	_, uiHeight := f.Owner.GetResolution()
+	designHeight := f.Owner.GetDesignHeight()
+	return float32(uiHeight) / float32(designHeight)
+}
+
 // GetRenderSize returns the width and height necessary in pixels for the
 // font to display a string. The third parameter is the advance height the
 // string.
-func (f *Font) GetRenderSize(msg string) (int, int, int) {
-	var w, h int
+func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
+	var w, h float32
+
+	// see how much to scale the size based on current resolution vs desgin resolution
+	fontScale := f.GetCurrentScale()
 
 	for _, ch := range msg {
 		// get the rune data
 		chData := f.locations[ch]
 
-		w += chData.advanceWidth
-		if chData.advanceHeight > h {
-			h = chData.advanceHeight
+		w += float32(chData.advanceWidth) * fontScale
+		if float32(chData.advanceHeight) > h {
+			h = float32(chData.advanceHeight)
 		}
 	}
 
-	return w, f.GlyphHeight, h
+	h = h * fontScale
+
+	return w, float32(f.GlyphHeight) * fontScale, h
 }
 
-// TypeRenderData is a structure containing the raw OpenGL VBO data needed
+// TextRenderData is a structure containing the raw OpenGL VBO data needed
 // to render a text string for a given texture.
 type TextRenderData struct {
 	ComboBuffer   []float32 // the combo VBO data (vert/uv/color)
@@ -226,6 +239,9 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 	// do a preliminary test to see how much room the message will take up
 	dimX, dimY, advH := f.GetRenderSize(msg)
 
+	// see how much to scale the size based on current resolution vs desgin resolution
+	fontScale := f.GetCurrentScale()
+
 	// loop through the message
 	var penX = pos[0]
 	var penY = pos[1] - float32(advH)
@@ -235,9 +251,9 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 
 		// setup the coordinates for ther vetexes
 		x0 := penX
-		y0 := penY - float32(f.GlyphHeight-chData.topSideBearing)
-		x1 := x0 + float32(f.GlyphWidth)
-		y1 := y0 + float32(f.GlyphHeight)
+		y0 := penY - float32(f.GlyphHeight-chData.topSideBearing)*fontScale
+		x1 := x0 + float32(f.GlyphWidth)*fontScale
+		y1 := y0 + float32(f.GlyphHeight)*fontScale
 		s0 := chData.uvMinX
 		t0 := chData.uvMinY
 		s1 := chData.uvMaxX
@@ -278,7 +294,7 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 		indexBuffer = append(indexBuffer, startIndex)
 
 		// advance the pen
-		penX += float32(chData.advanceWidth)
+		penX += float32(chData.advanceWidth) * fontScale
 	}
 
 	return TextRenderData{
