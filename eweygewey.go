@@ -28,6 +28,7 @@ type Style struct {
 	SliderBgColor     mgl.Vec4 // slider background color
 	SliderCursorColor mgl.Vec4 // slider cursor color
 	SliderFloatFormat string   // formatting string for the float value in a slider
+	SliderIntFormat   string   // formatting string for the int value in a slider
 	SliderMargin      mgl.Vec4 // margin for the slider text strings
 	SliderPadding     mgl.Vec4 // padding for the slider text strings
 	SliderTextColor   mgl.Vec4 // slider text color
@@ -80,6 +81,7 @@ var (
 		SliderBgColor:     ColorIToV(128, 128, 128, 179),
 		SliderCursorColor: ColorIToV(179, 179, 179, 179),
 		SliderFloatFormat: "%0.3f",
+		SliderIntFormat:   "%d",
 		SliderMargin:      mgl.Vec4{2, 2, 4, 4},
 		SliderPadding:     mgl.Vec4{2, 2, 2, 2},
 		SliderTextColor:   ColorIToV(230, 230, 230, 255),

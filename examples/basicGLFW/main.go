@@ -102,10 +102,11 @@ func main() {
 	}
 
 	// delcare the windows so that we can use them in the closures below
+	var testInt int
 	var mouseTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow(0.05, 0.95, 0.2, 0.25, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow(0.05, 0.95, 0.2, 0.35, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -134,7 +135,9 @@ func main() {
 		wnd.Button("Test 1")
 
 		wnd.StartRow()
-		wnd.SliderFloat("Bogus", &mainWindow.Width, 0.0, 1.0)
+		wnd.SliderFloat(&mainWindow.Width, 0.0, 1.0)
+		wnd.StartRow()
+		wnd.SliderInt(&testInt, 0, 255)
 	})
 	mouseTestWindow.ShowTitleBar = false
 	mouseTestWindow.IsMoveable = false

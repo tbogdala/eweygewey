@@ -262,7 +262,107 @@ func (wnd *Window) Button(text string) (bool, error) {
 	return buttonPressed, nil
 }
 
-func (wnd *Window) SliderFloat(label string, value *float32, min, max float32) error {
+// SliderFloat creates a slider widget that alters a value based on the min/max
+// values provided.
+func (wnd *Window) SliderFloat(value *float32, min, max float32) error {
+	var valueString string
+	style := DefaultStyle
+	sliderPressed, sliderW, _ := wnd.sliderHitTest()
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		moveRatio := mouseDeltaX / sliderW
+		delta := moveRatio * max
+		tmp := *value + delta
+		if tmp > max {
+			tmp = max
+		} else if tmp < min {
+			tmp = min
+		}
+		*value = tmp
+	}
+
+	// get the position / size for the slider
+	cursorRel := *value
+	cursorRel = (cursorRel - min) / (max - min)
+
+	valueString = fmt.Sprintf(style.SliderFloatFormat, *value)
+	return wnd.sliderBehavior(valueString, cursorRel)
+}
+
+// SliderInt creates a slider widget that alters a value based on the min/max
+// values provided.
+func (wnd *Window) SliderInt(value *int, min, max int) error {
+	var valueString string
+	style := DefaultStyle
+	sliderPressed, sliderW, _ := wnd.sliderHitTest()
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		moveRatio := mouseDeltaX / sliderW
+		delta := moveRatio * float32(max)
+		tmp := int(float32(*value) + delta)
+		if tmp > max {
+			tmp = max
+		} else if tmp < min {
+			tmp = min
+		}
+		*value = tmp
+	}
+
+	// get the position / size for the slider
+	cursorRel := float32(*value-min) / float32(max-min)
+
+	valueString = fmt.Sprintf(style.SliderIntFormat, *value)
+	return wnd.sliderBehavior(valueString, cursorRel)
+}
+
+// sliderHitTest calculates the size of the widget and then
+// returns true if mouse is within the bounding box of this widget;
+// as a convenience it also returns the width and height of the control
+// as the second and third results respectively.
+func (wnd *Window) sliderHitTest() (bool, float32, float32) {
+	style := DefaultStyle
+
+	// get the font for the text
+	font := wnd.Owner.GetFont(style.FontName)
+	if font == nil {
+		return false, 0, 0
+	}
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += style.SliderMargin[0]
+	pos[1] -= style.SliderMargin[2]
+
+	// calculate the size necessary for the widget
+	_, _, wndWidth, _ := wnd.GetDisplaySize()
+	dimY := float32(font.GlyphHeight) * font.GetCurrentScale()
+	sliderW := wndWidth - style.WindowPadding[0] - style.WindowPadding[1] - style.SliderMargin[0] - style.SliderMargin[1]
+	sliderH := dimY + style.SliderPadding[2] + style.SliderPadding[3]
+
+	// calculate how much of the slider control is available to the cursor for
+	// movement, which affects the scale of the value to edit.
+	sliderW = sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
+
+	// test to see if the mouse is inside the widget
+	mx, my := wnd.Owner.GetMousePosition()
+	if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
+		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+		if lmbStatus != MouseUp {
+			return true, sliderW, sliderH
+		}
+	}
+
+	return false, sliderW, sliderH
+}
+
+// sliderBehavior is the actual action of drawing the slider widget.
+func (wnd *Window) sliderBehavior(valueString string, valueRatio float32) error {
 	style := DefaultStyle
 
 	// get the font for the text
@@ -278,53 +378,23 @@ func (wnd *Window) SliderFloat(label string, value *float32, min, max float32) e
 
 	// calculate the size necessary for the widget
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
-	valueString := fmt.Sprintf(style.SliderFloatFormat, *value)
 	dimX, dimY, _ := font.GetRenderSize(valueString)
 	sliderW := wndWidth - style.WindowPadding[0] - style.WindowPadding[1] - style.SliderMargin[0] - style.SliderMargin[1]
 	sliderH := dimY + style.SliderPadding[2] + style.SliderPadding[3]
 
 	// set a default color for the background
 	bgColor := style.SliderBgColor
-	sliderPressed := false
-
-	// test to see if the mouse is inside the widget
-	mx, my := wnd.Owner.GetMousePosition()
-	if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
-		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
-		if lmbStatus != MouseUp {
-			sliderPressed = true
-		}
-	}
 
 	// calculate how much of the slider control is available to the cursor for
 	// movement, which affects the scale of the value to edit.
 	sliderRangeW := sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
 	cursorH := sliderH - style.SliderPadding[2] - style.SliderPadding[3]
 
-	// we have a mouse down in the widget, so check to see how much the mouse has
-	// moved and slide the control cursor and edit the value accordingly.
-	if sliderPressed {
-		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
-		moveRatio := mouseDeltaX / sliderRangeW
-		delta := moveRatio * max
-		tmp := *value + delta
-		if tmp > max {
-			tmp = max
-		} else if tmp < min {
-			tmp = min
-		}
-		*value = tmp
-		// re-render the string
-		valueString = fmt.Sprintf(style.SliderFloatFormat, *value)
-	}
-
 	// render the widget background
 	wnd.Owner.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor)
 
 	// get the position / size for the slider
-	cursorRel := *value
-	cursorRel = (cursorRel - min) / (max - min)
-	cursorPosX := cursorRel*sliderRangeW + style.SliderPadding[0]
+	cursorPosX := valueRatio*sliderRangeW + style.SliderPadding[0]
 
 	// render the slider cursor
 	wnd.Owner.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
