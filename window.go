@@ -313,7 +313,7 @@ func (wnd *Window) SliderFloat(id string, value *float32, min, max float32) erro
 	cursorRel = (cursorRel - min) / (max - min)
 
 	valueString = fmt.Sprintf(style.SliderFloatFormat, *value)
-	return wnd.sliderBehavior(valueString, cursorRel)
+	return wnd.sliderBehavior(valueString, cursorRel, true)
 }
 
 // SliderInt creates a slider widget that alters a value based on the min/max
@@ -342,7 +342,25 @@ func (wnd *Window) SliderInt(id string, value *int, min, max int) error {
 	cursorRel := float32(*value-min) / float32(max-min)
 
 	valueString = fmt.Sprintf(style.SliderIntFormat, *value)
-	return wnd.sliderBehavior(valueString, cursorRel)
+	return wnd.sliderBehavior(valueString, cursorRel, true)
+}
+
+// DragSliderInt creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
+	var valueString string
+	style := DefaultStyle
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += int(mouseDeltaX * speed)
+	}
+
+	valueString = fmt.Sprintf(style.SliderIntFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
 }
 
 // sliderHitTest calculates the size of the widget and then
@@ -395,7 +413,7 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 }
 
 // sliderBehavior is the actual action of drawing the slider widget.
-func (wnd *Window) sliderBehavior(valueString string, valueRatio float32) error {
+func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCursor bool) error {
 	style := DefaultStyle
 
 	// get the font for the text
@@ -418,20 +436,22 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32) error 
 	// set a default color for the background
 	bgColor := style.SliderBgColor
 
-	// calculate how much of the slider control is available to the cursor for
-	// movement, which affects the scale of the value to edit.
-	sliderRangeW := sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
-	cursorH := sliderH - style.SliderPadding[2] - style.SliderPadding[3]
-
 	// render the widget background
 	wnd.Owner.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor)
 
-	// get the position / size for the slider
-	cursorPosX := valueRatio*sliderRangeW + style.SliderPadding[0]
+	if drawCursor {
+		// calculate how much of the slider control is available to the cursor for
+		// movement, which affects the scale of the value to edit.
+		sliderRangeW := sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
+		cursorH := sliderH - style.SliderPadding[2] - style.SliderPadding[3]
 
-	// render the slider cursor
-	wnd.Owner.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
-		pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor)
+		// get the position / size for the slider
+		cursorPosX := valueRatio*sliderRangeW + style.SliderPadding[0]
+
+		// render the slider cursor
+		wnd.Owner.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
+			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor)
+	}
 
 	// create the text for the slider
 	textPos := pos
