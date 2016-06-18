@@ -14,6 +14,11 @@ import (
 // GetMousePositionFunc is the type of function to be called to get the mouse position.
 type GetMousePositionFunc func() (float32, float32)
 
+// GetMouseDownPositionFunc is the type of function to be called that takes a button number
+// to query and should return the location of the mouse when that button transitioned
+// from UP->DOWN.
+type GetMouseDownPositionFunc func(buttonNumber int) (float32, float32)
+
 // GetMouseButtonActionFunc is the type of function to be called that takes a button number
 // to query and should return an enumeration value like MouseUp, MouseDown, etc...
 type GetMouseButtonActionFunc func(buttonNumber int) int
@@ -31,6 +36,10 @@ type Manager struct {
 	// GetMousePosition should be a function that returns the current mouse
 	// position for the application.
 	GetMousePosition GetMousePositionFunc
+
+	// GetMouseDownPosition should be a function that returns the mouse position
+	// stored for when the button made the transition from UP->DOWN.
+	GetMouseDownPosition GetMouseDownPositionFunc
 
 	// GetMousePositionDelta should be a function that returns the amount
 	// of change in the mouse position.
@@ -60,6 +69,9 @@ type Manager struct {
 
 	// windows is the slice of known windows to render.
 	windows []*Window
+
+	// activeInputID is the ID string of the widget that claimed input on mouse down.
+	activeInputID string
 
 	// gfx is the underlying graphics implementation to be used for rendering.
 	gfx graphics.GraphicsProvider
@@ -148,8 +160,8 @@ func (ui *Manager) GetResolution() (int32, int32) {
 }
 
 // NewWindow creates a new window and adds it to the collection of windows to draw.
-func (ui *Manager) NewWindow(x, y, w, h float32, constructor BuildCallback) *Window {
-	wnd := newWindow(x, y, w, h, constructor)
+func (ui *Manager) NewWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window {
+	wnd := newWindow(id, x, y, w, h, constructor)
 	wnd.Owner = ui
 	ui.windows = append(ui.windows, wnd)
 	return wnd
@@ -179,6 +191,28 @@ func (ui *Manager) AddConstructionStartCallback(cb FrameStartFunc) {
 	ui.frameStartCallbacks = append(ui.frameStartCallbacks, cb)
 }
 
+// SetActiveInputID sets the active input id which tells the user interface
+// which widget is currently claiming 'focus' for input. Returns a bool indicating
+// if the focus claim was successful
+func (ui *Manager) SetActiveInputID(id string) bool {
+	if ui.activeInputID == "" || ui.GetMouseButtonAction(0) != MouseDown {
+		ui.activeInputID = id
+		return true
+	}
+
+	return false
+}
+
+// GetActiveInputID returns the active input id which claimed input focus.
+func (ui *Manager) GetActiveInputID() string {
+	return ui.activeInputID
+}
+
+// ClearActiveInputID clears any focus claims.
+func (ui *Manager) ClearActiveInputID() {
+	ui.activeInputID = ""
+}
+
 // Construct loops through all of the Windows in the Manager and creates
 // all of the widgets and their data. This function does not buffer the
 // result to VBO or do the actual rendering -- call Draw() for that.
@@ -196,6 +230,11 @@ func (ui *Manager) Construct() {
 
 	// trigger a mouse position check each frame
 	ui.GetMousePosition()
+
+	// see if we need to clear the active widget id
+	if ui.GetMouseButtonAction(0) != MouseDown {
+		ui.ClearActiveInputID()
+	}
 
 	// loop through all of the windows and tell them to self-construct.
 	for _, w := range ui.windows {

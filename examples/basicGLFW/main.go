@@ -106,7 +106,7 @@ func main() {
 	var mouseTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow(0.05, 0.95, 0.2, 0.35, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.35, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -131,19 +131,19 @@ func main() {
 
 		// throw a few test buttons into the mix
 		wnd.StartRow()
-		wnd.Button("Show Cursor Pos")
-		wnd.Button("Test 1")
+		wnd.Button("TestBtn0", "Show Cursor Pos")
+		wnd.Button("TestBtn1", "Test 1")
 
 		wnd.StartRow()
-		wnd.SliderFloat(&mainWindow.Width, 0.0, 1.0)
+		wnd.SliderFloat("FloatSlider", &mainWindow.Width, 0.0, 1.0)
 		wnd.StartRow()
-		wnd.SliderInt(&testInt, 0, 255)
+		wnd.SliderInt("IntSlider", &testInt, 0, 255)
 	})
 	mouseTestWindow.ShowTitleBar = false
-	mouseTestWindow.IsMoveable = false
+	//mouseTestWindow.IsMoveable = false
 
 	// create the test window for widgets
-	mainWindow = uiman.NewWindow(0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {
+	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"

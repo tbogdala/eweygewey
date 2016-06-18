@@ -14,6 +14,9 @@ type BuildCallback func(window *Window)
 
 // Window represents a collection of widgets in the user interface.
 type Window struct {
+	// ID is the widget id string for the window for claiming focus.
+	ID string
+
 	// Location is the location of the upper left hand corner of the window.
 	// The X and Y axis should be specified screen-normalized coordinates.
 	Location mgl.Vec3
@@ -62,8 +65,9 @@ type Window struct {
 
 // newWindow creates a new window with a top-left coordinate of (x,y) and
 // dimensions of (w,h).
-func newWindow(x, y, w, h float32, constructor BuildCallback) *Window {
+func newWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window {
 	wnd := new(Window)
+	wnd.ID = id
 	wnd.Location[0] = x
 	wnd.Location[1] = y
 	wnd.Width = w
@@ -84,20 +88,24 @@ func (wnd *Window) construct() {
 	mouseDeltaX, mouseDeltaY := wnd.Owner.GetMousePositionDelta()
 	lmbDown := wnd.Owner.GetMouseButtonAction(0) == MouseDown
 
-	// do we need to move the window? (LMB down in a window and mouse dragged)
-	if wnd.IsMoveable && lmbDown && wnd.ContainsPosition(mouseX, mouseY) {
-		// mouse down in the window, lets move the thing before we make the vertices
-		deltaXS, deltaYS := wnd.Owner.DisplayToScreen(mouseDeltaX, mouseDeltaY)
-		wnd.Location[0] += deltaXS
-		wnd.Location[1] += deltaYS
-	}
-
 	// build the frame background for the window
 	wnd.buildFrame()
 
 	// invoke the callback to build the widgets for the window
 	if wnd.OnBuild != nil {
 		wnd.OnBuild(wnd)
+	}
+
+	// next frame we potientially will have a different window location
+	// do we need to move the window? (LMB down in a window and mouse dragged)
+	if wnd.IsMoveable && lmbDown && wnd.ContainsPosition(mouseX, mouseY) {
+		claimed := wnd.Owner.SetActiveInputID(wnd.ID)
+		if claimed || wnd.Owner.GetActiveInputID() == wnd.ID {
+			// mouse down in the window, lets move the thing before we make the vertices
+			deltaXS, deltaYS := wnd.Owner.DisplayToScreen(mouseDeltaX, mouseDeltaY)
+			wnd.Location[0] += deltaXS
+			wnd.Location[1] += deltaYS
+		}
 	}
 }
 
@@ -186,6 +194,16 @@ func (wnd *Window) getCursorDC() mgl.Vec3 {
 	return pos
 }
 
+/*
+_    _  _____ ______  _____  _____  _____  _____
+| |  | ||_   _||  _  \|  __ \|  ___||_   _|/  ___|
+| |  | |  | |  | | | || |  \/| |__    | |  \ `--.
+| |/\| |  | |  | | | || | __ |  __|   | |   `--. \
+\  /\  / _| |_ | |/ / | |_\ \| |___   | |  /\__/ /
+\/  \/  \___/ |___/   \____/\____/   \_/  \____/
+
+*/
+
 // Text renders a text widget
 func (wnd *Window) Text(msg string) error {
 	style := DefaultStyle
@@ -210,7 +228,8 @@ func (wnd *Window) Text(msg string) error {
 	return nil
 }
 
-func (wnd *Window) Button(text string) (bool, error) {
+// Button draws the button widget on screen with the given text.
+func (wnd *Window) Button(id string, text string) (bool, error) {
 	style := DefaultStyle
 
 	// get the font for the text
@@ -240,8 +259,13 @@ func (wnd *Window) Button(text string) (bool, error) {
 		if lmbStatus == MouseUp {
 			bgColor = style.ButtonHoverColor
 		} else {
-			bgColor = style.ButtonActiveColor
-			buttonPressed = true
+			// mouse is down, but was it pressed inside the button?
+			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
+			if mdx > pos[0] && mdy > pos[1]-buttonH && mdx < pos[0]+buttonW && mdy < pos[1] {
+				bgColor = style.ButtonActiveColor
+				buttonPressed = true
+				wnd.Owner.SetActiveInputID(id)
+			}
 		}
 	}
 
@@ -264,10 +288,10 @@ func (wnd *Window) Button(text string) (bool, error) {
 
 // SliderFloat creates a slider widget that alters a value based on the min/max
 // values provided.
-func (wnd *Window) SliderFloat(value *float32, min, max float32) error {
+func (wnd *Window) SliderFloat(id string, value *float32, min, max float32) error {
 	var valueString string
 	style := DefaultStyle
-	sliderPressed, sliderW, _ := wnd.sliderHitTest()
+	sliderPressed, sliderW, _ := wnd.sliderHitTest(id)
 
 	// we have a mouse down in the widget, so check to see how much the mouse has
 	// moved and slide the control cursor and edit the value accordingly.
@@ -294,10 +318,10 @@ func (wnd *Window) SliderFloat(value *float32, min, max float32) error {
 
 // SliderInt creates a slider widget that alters a value based on the min/max
 // values provided.
-func (wnd *Window) SliderInt(value *int, min, max int) error {
+func (wnd *Window) SliderInt(id string, value *int, min, max int) error {
 	var valueString string
 	style := DefaultStyle
-	sliderPressed, sliderW, _ := wnd.sliderHitTest()
+	sliderPressed, sliderW, _ := wnd.sliderHitTest(id)
 
 	// we have a mouse down in the widget, so check to see how much the mouse has
 	// moved and slide the control cursor and edit the value accordingly.
@@ -325,7 +349,7 @@ func (wnd *Window) SliderInt(value *int, min, max int) error {
 // returns true if mouse is within the bounding box of this widget;
 // as a convenience it also returns the width and height of the control
 // as the second and third results respectively.
-func (wnd *Window) sliderHitTest() (bool, float32, float32) {
+func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 	style := DefaultStyle
 
 	// get the font for the text
@@ -350,11 +374,20 @@ func (wnd *Window) sliderHitTest() (bool, float32, float32) {
 	sliderW = sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
 
 	// test to see if the mouse is inside the widget
-	mx, my := wnd.Owner.GetMousePosition()
-	if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
-		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
-		if lmbStatus != MouseUp {
+	lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+	if lmbStatus != MouseUp {
+		// are  we already the active widget?
+		if wnd.Owner.GetActiveInputID() == id {
 			return true, sliderW, sliderH
+		}
+
+		// try to claim focus
+		mx, my := wnd.Owner.GetMouseDownPosition(0)
+		if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
+			claimed := wnd.Owner.SetActiveInputID(id)
+			if claimed {
+				return true, sliderW, sliderH
+			}
 		}
 	}
 
