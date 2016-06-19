@@ -42,6 +42,14 @@ type Window struct {
 	// IsMoveable indicates if the window should be moveable by LMB drags
 	IsMoveable bool
 
+	// IsScrollable indicates if the window should scroll the contents based
+	// on mouse scroll wheel input.
+	IsScrollable bool
+
+	// AutoAdjustHeight indicates if the window's height should be automatically
+	// adjusted to accommodate all of the widgets.
+	AutoAdjustHeight bool
+
 	// Title is the string to display in the title bar if it is visible
 	Title string
 
@@ -53,6 +61,10 @@ type Window struct {
 	// Owner is the owning UI Manager object.
 	Owner *Manager
 
+	// ScrollOffset is essentially the scrollbar *position* which tells the
+	// window hot to offset the controlls to give the scrolling effect.
+	ScrollOffset float32
+
 	// widgetCursorDC is the current location to insert widgets and should
 	// be updated after adding new widgets. This is specified in display
 	// coordinates.
@@ -61,6 +73,9 @@ type Window struct {
 	// nextRowCursorOffset is the value the widgetCursorDC's y component
 	// should change for the next widget that starts a new row in the window.
 	nextRowCursorOffset float32
+
+	// cmds is the slice of cmdLists used to to render the window
+	cmds []*cmdList
 }
 
 // newWindow creates a new window with a top-left coordinate of (x,y) and
@@ -78,23 +93,43 @@ func newWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window
 	wnd.OnBuild = constructor
 	wnd.ShowTitleBar = true
 	wnd.IsMoveable = true
+	//wnd.IsScrollable = false
 	return wnd
 }
 
 // construct builds the frame (if one is to be made) for the window and then
 // calls the OnBuild function specified for the window to create the widgets.
 func (wnd *Window) construct() {
+	// empty out the cmd list and start a new command
+	wnd.cmds = wnd.cmds[:0]
+
 	mouseX, mouseY := wnd.Owner.GetMousePosition()
 	mouseDeltaX, mouseDeltaY := wnd.Owner.GetMousePositionDelta()
 	lmbDown := wnd.Owner.GetMouseButtonAction(0) == MouseDown
 
-	// build the frame background for the window
-	wnd.buildFrame()
+	// if the mouse is in the window, then let's scroll if the scroll input
+	// was received.
+	if wnd.IsScrollable && wnd.ContainsPosition(mouseX, mouseY) {
+		wnd.ScrollOffset += wnd.Owner.GetScrollWheelDelta(true)
+		if wnd.ScrollOffset > 0.0 {
+			wnd.ScrollOffset = 0.0
+		}
+	}
 
 	// invoke the callback to build the widgets for the window
 	if wnd.OnBuild != nil {
 		wnd.OnBuild(wnd)
 	}
+
+	// are we going to fit the height of the window to the height of the controls?
+	if wnd.AutoAdjustHeight {
+		hDC := -wnd.widgetCursorDC[1] + wnd.nextRowCursorOffset
+		_, hS := wnd.Owner.DisplayToScreen(0.0, hDC)
+		wnd.Height = hS
+	}
+
+	// build the frame background for the window
+	wnd.buildFrame()
 
 	// next frame we potientially will have a different window location
 	// do we need to move the window? (LMB down in a window and mouse dragged)
@@ -118,16 +153,48 @@ func (wnd *Window) GetDisplaySize() (float32, float32, float32, float32) {
 	return winxDC, winyDC, winwDC, winhDC
 }
 
+func (wnd *Window) makeCmdList() *cmdList {
+	wx, wy, ww, wh := wnd.GetDisplaySize()
+	cmdList := newCmdList()
+	cmdList.clipRect[0] = wx
+	cmdList.clipRect[1] = wy
+	cmdList.clipRect[2] = ww
+	cmdList.clipRect[3] = wh
+	return cmdList
+}
+
+func (wnd *Window) getFirstCmd() *cmdList {
+	if len(wnd.cmds) == 0 {
+		// safety first!
+		wnd.cmds = []*cmdList{wnd.makeCmdList()}
+	}
+	return wnd.cmds[0]
+}
+
+func (wnd *Window) getLastCmd() *cmdList {
+	if len(wnd.cmds) == 0 {
+		// safety first!
+		wnd.cmds = []*cmdList{wnd.makeCmdList()}
+	}
+	return wnd.cmds[len(wnd.cmds)-1]
+}
+
 // buildFrame builds the background for the window
 func (wnd *Window) buildFrame() {
+	// get the first cmdList and insert the frame data into it
+	firstCmd := wnd.getFirstCmd()
+
 	// reset the cursor for the window
-	wnd.widgetCursorDC = mgl.Vec3{0, 0, 0}
+	wnd.widgetCursorDC = mgl.Vec3{0, wnd.ScrollOffset, 0}
 	wnd.nextRowCursorOffset = 0
 
 	// if we don't have a title bar, then simply render the background frame
 	if wnd.ShowTitleBar == false {
 		// build the background of the window
-		wnd.Owner.DrawRectFilled(wnd.Location[0], wnd.Location[1], wnd.Width, wnd.Height, wnd.BgColor)
+		x, y := wnd.Owner.ScreenToDisplay(wnd.Location[0], wnd.Location[1])
+		w, h := wnd.Owner.ScreenToDisplay(wnd.Width, wnd.Height)
+		combos, indexes, fc := firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
+		firstCmd.PrefixFaces(combos, indexes, fc)
 		return
 	}
 
@@ -144,17 +211,19 @@ func (wnd *Window) buildFrame() {
 	// TODO: for now just add 1 pixel on each side of the string for padding
 	titleBarHeight := float32(dimY + 4)
 
-	// render the title bar background
-	wnd.Owner.DrawRectFilledDC(winxDC, winyDC, winxDC+winwDC, winyDC-titleBarHeight, wnd.TitleBarBgColor)
-
-	// render the rest of the window background
-	wnd.Owner.DrawRectFilledDC(winxDC, winyDC-titleBarHeight, winxDC+winwDC, winyDC-winhDC, wnd.BgColor)
-
 	// render the title bar text
 	if len(wnd.Title) > 0 {
 		renderData := font.CreateText(mgl.Vec3{winxDC, winyDC, 0}, wnd.TitleBarTextColor, wnd.Title)
-		wnd.Owner.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+		firstCmd.PrefixFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 	}
+
+	// render the title bar background
+	combos, indexes, fc := firstCmd.DrawRectFilledDC(winxDC, winyDC, winxDC+winwDC, winyDC-titleBarHeight, wnd.TitleBarBgColor, wnd.Owner.whitePixelUv)
+	firstCmd.PrefixFaces(combos, indexes, fc)
+
+	// render the rest of the window background
+	combos, indexes, fc = firstCmd.DrawRectFilledDC(winxDC, winyDC-titleBarHeight, winxDC+winwDC, winyDC-winhDC, wnd.BgColor, wnd.Owner.whitePixelUv)
+	firstCmd.PrefixFaces(combos, indexes, fc)
 
 	// advance the cursor to account for the title bar
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - titleBarHeight
@@ -207,6 +276,7 @@ _    _  _____ ______  _____  _____  _____  _____
 // Text renders a text widget
 func (wnd *Window) Text(msg string) error {
 	style := DefaultStyle
+	cmd := wnd.getLastCmd()
 
 	// get the font for the text
 	font := wnd.Owner.GetFont(style.FontName)
@@ -219,7 +289,7 @@ func (wnd *Window) Text(msg string) error {
 
 	// create the text widget itself
 	renderData := font.CreateText(pos, style.TextColor, msg)
-	wnd.Owner.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
 	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + renderData.Width
@@ -231,6 +301,7 @@ func (wnd *Window) Text(msg string) error {
 // Button draws the button widget on screen with the given text.
 func (wnd *Window) Button(id string, text string) (bool, error) {
 	style := DefaultStyle
+	cmd := wnd.getLastCmd()
 
 	// get the font for the text
 	font := wnd.Owner.GetFont(style.FontName)
@@ -270,14 +341,15 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	}
 
 	// render the button background
-	wnd.Owner.DrawRectFilledDC(pos[0], pos[1], pos[0]+buttonW, pos[1]-buttonH, bgColor)
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+buttonW, pos[1]-buttonH, bgColor, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
 
 	// create the text for the button
 	textPos := pos
 	textPos[0] += style.ButtonPadding[0]
 	textPos[1] -= style.ButtonPadding[2]
 	renderData := font.CreateText(textPos, style.ButtonTextColor, text)
-	wnd.Owner.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
 	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + buttonW + style.ButtonMargin[0] + style.ButtonMargin[1]
@@ -415,6 +487,7 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 // sliderBehavior is the actual action of drawing the slider widget.
 func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCursor bool) error {
 	style := DefaultStyle
+	cmd := wnd.getLastCmd()
 
 	// get the font for the text
 	font := wnd.Owner.GetFont(style.FontName)
@@ -437,7 +510,8 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	bgColor := style.SliderBgColor
 
 	// render the widget background
-	wnd.Owner.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor)
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
 
 	if drawCursor {
 		// calculate how much of the slider control is available to the cursor for
@@ -449,8 +523,9 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 		cursorPosX := valueRatio*sliderRangeW + style.SliderPadding[0]
 
 		// render the slider cursor
-		wnd.Owner.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
-			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor)
+		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
+			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor, wnd.Owner.whitePixelUv)
+		cmd.AddFaces(combos, indexes, fc)
 	}
 
 	// create the text for the slider
@@ -458,7 +533,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	textPos[0] += style.SliderPadding[0] + (0.5 * sliderW) - (0.5 * dimX)
 	textPos[1] -= style.SliderPadding[2]
 	renderData := font.CreateText(textPos, style.SliderTextColor, valueString)
-	wnd.Owner.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
 	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + style.SliderMargin[0] + style.SliderMargin[1]

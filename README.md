@@ -75,7 +75,7 @@ Current Features
 * Widgets:
     * Text
     * Buttons
-    * Slider
+    * Sliders for ints and floats
 
 TODO
 ----
@@ -88,6 +88,7 @@ The following need to be addressed in order to start releases:
     * images
     * custom widgets
     * scroll bars
+* detailed theming (e.g. custom drawing of slider cursor)
 * documentation
 * samples
 

@@ -66,8 +66,10 @@ func renderFrame(frameDelta float64) {
 
 	// draw the user interface
 	gfx.Disable(graphics.DEPTH_TEST)
+	gfx.Enable(graphics.SCISSOR_TEST)
 	uiman.Construct()
 	uiman.Draw()
+	gfx.Disable(graphics.SCISSOR_TEST)
 	gfx.Enable(graphics.DEPTH_TEST)
 }
 
@@ -106,7 +108,7 @@ func main() {
 	var mouseTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.375, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.575, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -143,6 +145,8 @@ func main() {
 	})
 	mouseTestWindow.ShowTitleBar = false
 	mouseTestWindow.IsMoveable = false
+	mouseTestWindow.IsScrollable = false
+	mouseTestWindow.AutoAdjustHeight = true
 
 	// create the test window for widgets
 	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {

@@ -27,6 +27,11 @@ type GetMouseButtonActionFunc func(buttonNumber int) int
 // last amount of change in the mouse position.
 type GetMousePositionDeltaFunc func() (float32, float32)
 
+// GetScrollWheelDeltaFunc is the type of function to be called to get the
+// amount of change that has happened to the mouse scroll wheel since last check.
+// The bool parameter indicate whether or not to return a cached value.
+type GetScrollWheelDeltaFunc func(bool) float32
+
 // FrameStartFunc is the type of function to be called when the manager is starting
 // a new frame to construct and draw.
 type FrameStartFunc func(startTime time.Time)
@@ -49,8 +54,15 @@ type Manager struct {
 	// of a mouse button: MouseUp | MouseDown | MouseRepeat.
 	GetMouseButtonAction GetMouseButtonActionFunc
 
+	// GetScrollWheelDelta should be a function that returns the amount of
+	// change to the scroll wheel position that has happened since last check.
+	GetScrollWheelDelta GetScrollWheelDeltaFunc
+
 	// FrameStart is the time the UI manager's Construct() was called.
 	FrameStart time.Time
+
+	// ScrollSpeed is how much each move of the scroll wheel should be magnified
+	ScrollSpeed float32
 
 	// width is used to construct the ortho projection matrix and is probably
 	// best set to the width of the window.
@@ -91,8 +103,8 @@ type Manager struct {
 	frameStartCallbacks []FrameStartFunc
 
 	comboBuffer []float32
-	comboVBO    graphics.Buffer
 	indexBuffer []uint32
+	comboVBO    graphics.Buffer
 	indexVBO    graphics.Buffer
 	vao         uint32
 	faceCount   uint32
@@ -107,11 +119,8 @@ func NewManager(gfx graphics.GraphicsProvider) *Manager {
 	m.gfx = gfx
 	m.whitePixelUv = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
 	m.FrameStart = time.Now()
+	m.ScrollSpeed = 10.0
 
-	// create the buffers to store the floats/indexes that will get sent to OpenGL
-	const defaultBufferSize = 1024 * 8
-	m.comboBuffer = make([]float32, 0, defaultBufferSize)
-	m.indexBuffer = make([]uint32, 0, defaultBufferSize)
 	m.vao = gfx.GenVertexArray()
 
 	m.GetMousePosition = func() (float32, float32) { return 0, 0 }
@@ -230,6 +239,7 @@ func (ui *Manager) Construct() {
 
 	// trigger a mouse position check each frame
 	ui.GetMousePosition()
+	ui.GetScrollWheelDelta(false)
 
 	// see if we need to clear the active widget id
 	if ui.GetMouseButtonAction(0) != MouseDown {
@@ -256,6 +266,22 @@ func (ui *Manager) Draw() {
 	// FIXME: move the zdepth definitions elsewhere
 	const minZDepth = -100.0
 	const maxZDepth = 100.0
+
+	// for now, loop through all of the windows and copy all of the data into the manager's buffer
+	// FIXME: this could be buffered straight from the cmdList
+	startIndex := uint32(0)
+	for _, w := range ui.windows {
+		for _, cmd := range w.cmds {
+			ui.comboBuffer = append(ui.comboBuffer, cmd.comboBuffer...)
+
+			// reindex the index buffer to reference the correct vertex data
+			for _, i := range cmd.indexBuffer {
+				ui.indexBuffer = append(ui.indexBuffer, i+startIndex)
+			}
+			ui.faceCount += cmd.faceCount
+			startIndex = cmd.faceCount * 2
+		}
+	}
 
 	gfx.UseProgram(ui.shader)
 	gfx.BindVertexArray(ui.vao)
@@ -295,7 +321,17 @@ func (ui *Manager) Draw() {
 	gfx.VertexAttribPointer(uint32(colorPosition), 4, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(colorOffset))
 
 	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
-	gfx.DrawElements(graphics.TRIANGLES, int32(ui.faceCount*3), graphics.UNSIGNED_INT, gfx.PtrOffset(0))
+
+	// loop through the windows and each window's draw cmd list
+	indexOffset := uint32(0)
+	for _, w := range ui.windows {
+		for _, cmd := range w.cmds {
+			gfx.Scissor(int32(cmd.clipRect[0]), int32(cmd.clipRect[1]-cmd.clipRect[3]), int32(cmd.clipRect[0]+cmd.clipRect[2]), int32(cmd.clipRect[1]))
+			gfx.DrawElements(graphics.TRIANGLES, int32(cmd.faceCount*3), graphics.UNSIGNED_INT, gfx.PtrOffset(int(indexOffset)*uintSize))
+			indexOffset += cmd.faceCount * 3
+		}
+	}
+
 	gfx.BindVertexArray(0)
 }
 
@@ -356,73 +392,11 @@ func (ui *Manager) DisplayToScreen(xD, yD float32) (float32, float32) {
 }
 
 // DrawRectFilled draws a rectangle in the user interface using a solid background.
-// Coordinate parameters should be passed in screen-normalized space.
-func (ui *Manager) DrawRectFilled(xS, yS, wS, hS float32, color mgl.Vec4) {
+// Coordinate parameters should be passed in screen-normalized space. This gets
+// appended to the command list passed in.
+func (ui *Manager) DrawRectFilled(cmd *cmdList, xS, yS, wS, hS float32, color mgl.Vec4) {
 	x, y := ui.ScreenToDisplay(xS, yS)
 	w, h := ui.ScreenToDisplay(wS, hS)
-	ui.DrawRectFilledDC(x, y, x+w, y-h, color)
-}
-
-// DrawRectFilledDC draws a rectangle in the user interface using a solid background.
-// Coordinate parameters should be passed in display coordinates.
-func (ui *Manager) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4) {
-	uv := ui.whitePixelUv
-
-	//tlx, tly := ui.ScreenToDisplay(xS, yS)
-	//brx, bry := ui.ScreenToDisplay(xS+wS, yS-hS)
-
-	verts := [8]float32{
-		tlx, bry,
-		brx, bry,
-		tlx, tly,
-		brx, tly,
-	}
-	indexes := [6]uint32{
-		0, 1, 2,
-		1, 3, 2,
-	}
-
-	uvs := [8]float32{
-		uv[0], uv[1],
-		uv[2], uv[1],
-		uv[1], uv[3],
-		uv[2], uv[3],
-	}
-
-	// add the four vertices
-	for i := 0; i < 4; i++ {
-		// add the vertex
-		ui.comboBuffer = append(ui.comboBuffer, verts[i*2])
-		ui.comboBuffer = append(ui.comboBuffer, verts[i*2+1])
-
-		// add the uv
-		ui.comboBuffer = append(ui.comboBuffer, uvs[i*2])
-		ui.comboBuffer = append(ui.comboBuffer, uvs[i*2+1])
-
-		// add the color
-		ui.comboBuffer = append(ui.comboBuffer, color[:]...)
-	}
-
-	// define the polys with 2 faces (6 indexes)
-	for i := 0; i < 6; i++ {
-		ui.indexBuffer = append(ui.indexBuffer, indexes[i]+2*ui.faceCount)
-	}
-
-	// rectangles add two faces
-	ui.faceCount += 2
-}
-
-// AddFaces takes the raw vertex attribute data in a float slice as well as the
-// element indexes and adds it to the internal buffers for rendering.
-func (ui *Manager) AddFaces(comboFloats []float32, indexInts []uint32, faceCount int) {
-	ui.comboBuffer = append(ui.comboBuffer, comboFloats...)
-
-	// manually adjust each index so that they don't collide with
-	// existing element indexes
-	startIndex := ui.faceCount * 2
-	for _, idx := range indexInts {
-		ui.indexBuffer = append(ui.indexBuffer, startIndex+idx)
-	}
-
-	ui.faceCount += uint32(faceCount)
+	combos, indexes, fc := cmd.DrawRectFilledDC(x, y, x+w, y-h, color, ui.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
 }

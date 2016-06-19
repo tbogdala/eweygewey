@@ -219,7 +219,7 @@ func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
 type TextRenderData struct {
 	ComboBuffer   []float32 // the combo VBO data (vert/uv/color)
 	IndexBuffer   []uint32  // the element index VBO data
-	Faces         int       // the number of faces in the text string
+	Faces         uint32    // the number of faces in the text string
 	Width         float32   // the width in pixels of the text string
 	Height        float32   // the height in pixels of the text string
 	AdvanceHeight float32   // the amount of pixels to move the pen in the verticle direction
@@ -299,7 +299,7 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 	return TextRenderData{
 		ComboBuffer:   comboBuffer,
 		IndexBuffer:   indexBuffer,
-		Faces:         msgLength * 2,
+		Faces:         uint32(msgLength * 2),
 		Width:         float32(dimX),
 		Height:        float32(dimY),
 		AdvanceHeight: float32(advH),

@@ -179,4 +179,22 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 		// mouse not down or not tracked.
 		return -1.0, -1.0
 	}
+
+	scrollWheelDelta := float32(0.0)
+	scrollWheelCache := float32(0.0)
+	uiman.GetScrollWheelDelta = func(useCached bool) float32 {
+		if useCached {
+			return scrollWheelCache
+		}
+		scrollWheelCache = scrollWheelDelta
+		scrollWheelDelta = 0.0
+		return scrollWheelCache
+	}
+
+	// create our own handler for the scroll wheel which then passes the
+	// correct data to our own scroll wheel handler function
+	window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
+		scrollWheelDelta += float32(yoff) * uiman.ScrollSpeed
+	})
+
 }
