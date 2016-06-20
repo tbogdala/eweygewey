@@ -108,7 +108,7 @@ func main() {
 	var mouseTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.575, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.25, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -145,8 +145,9 @@ func main() {
 	})
 	mouseTestWindow.ShowTitleBar = false
 	mouseTestWindow.IsMoveable = false
-	mouseTestWindow.IsScrollable = false
-	mouseTestWindow.AutoAdjustHeight = true
+	mouseTestWindow.IsScrollable = true
+	mouseTestWindow.ShowScrollBar = true
+	//mouseTestWindow.AutoAdjustHeight = true
 
 	// create the test window for widgets
 	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {

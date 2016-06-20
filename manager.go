@@ -326,7 +326,7 @@ func (ui *Manager) Draw() {
 	indexOffset := uint32(0)
 	for _, w := range ui.windows {
 		for _, cmd := range w.cmds {
-			gfx.Scissor(int32(cmd.clipRect[0]), int32(cmd.clipRect[1]-cmd.clipRect[3]), int32(cmd.clipRect[0]+cmd.clipRect[2]), int32(cmd.clipRect[1]))
+			gfx.Scissor(int32(cmd.clipRect[0]), int32(cmd.clipRect[1]-cmd.clipRect[3]), int32(cmd.clipRect[2]), int32(cmd.clipRect[3]))
 			gfx.DrawElements(graphics.TRIANGLES, int32(cmd.faceCount*3), graphics.UNSIGNED_INT, gfx.PtrOffset(int(indexOffset)*uintSize))
 			indexOffset += cmd.faceCount * 3
 		}

@@ -18,26 +18,30 @@ const (
 // Style defines parameters to the drawing functions that control the way
 // the widgets are organized and drawn.
 type Style struct {
-	ButtonColor       mgl.Vec4 // button background color
-	ButtonHoverColor  mgl.Vec4 // button background color with mouse hovering
-	ButtonActiveColor mgl.Vec4 // button background color when clicked
-	ButtonTextColor   mgl.Vec4 // button text color
-	ButtonMargin      mgl.Vec4 // [left,right,top,bottom] margin values for buttons
-	ButtonPadding     mgl.Vec4 // [left,right,top,bottom] padding values for buttons
-	FontName          string   // font name to use by default
-	SliderBgColor     mgl.Vec4 // slider background color
-	SliderCursorColor mgl.Vec4 // slider cursor color
-	SliderFloatFormat string   // formatting string for the float value in a slider
-	SliderIntFormat   string   // formatting string for the int value in a slider
-	SliderMargin      mgl.Vec4 // margin for the slider text strings
-	SliderPadding     mgl.Vec4 // padding for the slider text strings
-	SliderTextColor   mgl.Vec4 // slider text color
-	SliderCursorWidth float32  // slider cursor width
-	TextColor         mgl.Vec4 // text color
-	TitleBarTextColor mgl.Vec4 // text color
-	TitleBarBgColor   mgl.Vec4 // window background color
-	WindowBgColor     mgl.Vec4 // window background color
-	WindowPadding     mgl.Vec4 // [left,right,top,bottom] padding values for windows
+	ButtonColor          mgl.Vec4 // button background color
+	ButtonHoverColor     mgl.Vec4 // button background color with mouse hovering
+	ButtonActiveColor    mgl.Vec4 // button background color when clicked
+	ButtonTextColor      mgl.Vec4 // button text color
+	ButtonMargin         mgl.Vec4 // [left,right,top,bottom] margin values for buttons
+	ButtonPadding        mgl.Vec4 // [left,right,top,bottom] padding values for buttons
+	FontName             string   // font name to use by default
+	ScrollBarCursorColor mgl.Vec4 // the color of the cursor of the scroll bar
+	ScrollBarBgColor     mgl.Vec4 // the color of the background of the scroll bar
+	ScrollBarWidth       float32  // the width of the scroll bar
+	ScrollBarCursorWidth float32  // the width of the scroll bar cursor
+	SliderBgColor        mgl.Vec4 // slider background color
+	SliderCursorColor    mgl.Vec4 // slider cursor color
+	SliderFloatFormat    string   // formatting string for the float value in a slider
+	SliderIntFormat      string   // formatting string for the int value in a slider
+	SliderMargin         mgl.Vec4 // margin for the slider text strings
+	SliderPadding        mgl.Vec4 // padding for the slider text strings
+	SliderTextColor      mgl.Vec4 // slider text color
+	SliderCursorWidth    float32  // slider cursor width
+	TextColor            mgl.Vec4 // text color
+	TitleBarTextColor    mgl.Vec4 // text color
+	TitleBarBgColor      mgl.Vec4 // window background color
+	WindowBgColor        mgl.Vec4 // window background color
+	WindowPadding        mgl.Vec4 // [left,right,top,bottom] padding values for windows
 }
 
 var (
@@ -71,26 +75,30 @@ var (
 
 	// DefaultStyle is the default style to use for drawing widgets
 	DefaultStyle = Style{
-		ButtonColor:       ColorIToV(171, 102, 102, 153),
-		ButtonActiveColor: ColorIToV(204, 128, 120, 255),
-		ButtonHoverColor:  ColorIToV(171, 102, 102, 255),
-		ButtonTextColor:   ColorIToV(230, 230, 230, 255),
-		ButtonMargin:      mgl.Vec4{2, 2, 4, 4},
-		ButtonPadding:     mgl.Vec4{4, 4, 2, 2},
-		FontName:          "Default",
-		SliderBgColor:     ColorIToV(128, 128, 128, 179),
-		SliderCursorColor: ColorIToV(179, 179, 179, 179),
-		SliderFloatFormat: "%0.3f",
-		SliderIntFormat:   "%d",
-		SliderMargin:      mgl.Vec4{2, 2, 4, 4},
-		SliderPadding:     mgl.Vec4{2, 2, 2, 2},
-		SliderTextColor:   ColorIToV(230, 230, 230, 255),
-		SliderCursorWidth: 15,
-		TextColor:         ColorIToV(230, 230, 230, 255),
-		TitleBarTextColor: ColorIToV(230, 230, 230, 255),
-		TitleBarBgColor:   ColorIToV(69, 69, 138, 212),
-		WindowBgColor:     ColorIToV(0, 0, 0, 179),
-		WindowPadding:     mgl.Vec4{4, 4, 4, 4},
+		ButtonColor:          ColorIToV(171, 102, 102, 153),
+		ButtonActiveColor:    ColorIToV(204, 128, 120, 255),
+		ButtonHoverColor:     ColorIToV(171, 102, 102, 255),
+		ButtonTextColor:      ColorIToV(230, 230, 230, 255),
+		ButtonMargin:         mgl.Vec4{2, 2, 4, 4},
+		ButtonPadding:        mgl.Vec4{4, 4, 2, 2},
+		FontName:             "Default",
+		ScrollBarCursorColor: ColorIToV(102, 102, 204, 77),
+		ScrollBarBgColor:     ColorIToV(51, 64, 77, 153),
+		ScrollBarWidth:       16.0,
+		ScrollBarCursorWidth: 10.0,
+		SliderBgColor:        ColorIToV(128, 128, 128, 179),
+		SliderCursorColor:    ColorIToV(179, 179, 179, 179),
+		SliderFloatFormat:    "%0.3f",
+		SliderIntFormat:      "%d",
+		SliderMargin:         mgl.Vec4{2, 2, 4, 4},
+		SliderPadding:        mgl.Vec4{2, 2, 2, 2},
+		SliderTextColor:      ColorIToV(230, 230, 230, 255),
+		SliderCursorWidth:    15.0,
+		TextColor:            ColorIToV(230, 230, 230, 255),
+		TitleBarTextColor:    ColorIToV(230, 230, 230, 255),
+		TitleBarBgColor:      ColorIToV(69, 69, 138, 212),
+		WindowBgColor:        ColorIToV(0, 0, 0, 179),
+		WindowPadding:        mgl.Vec4{4, 4, 4, 4},
 	}
 )
 
