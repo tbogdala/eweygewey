@@ -105,7 +105,7 @@ func main() {
 
 	// delcare the windows so that we can use them in the closures below
 	var testInt, testInt2 int
-	var mouseTestWindow, mainWindow *gui.Window
+	var mouseTestWindow, imageTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
 	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.25, func(wnd *gui.Window) {
@@ -136,8 +136,8 @@ func main() {
 		wnd.Button("TestBtn0", "Show Cursor Pos")
 		wnd.Button("TestBtn1", "Test 1")
 
-		wnd.StartRow()
-		wnd.SliderFloat("FloatSlider", &mainWindow.Width, 0.0, 1.0)
+		//wnd.StartRow()
+		//wnd.SliderFloat("FloatSlider", &mainWindow.Width, 0.0, 1.0)
 		wnd.StartRow()
 		wnd.SliderInt("IntSlider", &testInt, 0, 255)
 		wnd.StartRow()
@@ -154,6 +154,12 @@ func main() {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
+
+	imageTestWindow = uiman.NewWindow("ImageTest", 0.1, 0.25, 0.25, 0.25, func(wnd *gui.Window) {
+		wnd.Text(fmt.Sprintf("HI"))
+	})
+	imageTestWindow.Title = "Image Test"
+	imageTestWindow.ShowTitleBar = false
 
 	// set some additional OpenGL flags
 	gfx.BlendEquation(graphics.FUNC_ADD)

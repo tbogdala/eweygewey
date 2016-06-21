@@ -279,7 +279,7 @@ func (ui *Manager) Draw() {
 				ui.indexBuffer = append(ui.indexBuffer, i+startIndex)
 			}
 			ui.faceCount += cmd.faceCount
-			startIndex = cmd.faceCount * 2
+			startIndex += cmd.faceCount * 2
 		}
 	}
 

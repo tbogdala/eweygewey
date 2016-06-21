@@ -86,6 +86,7 @@ type Window struct {
 // dimensions of (w,h).
 func newWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window {
 	wnd := new(Window)
+	wnd.cmds = []*cmdList{}
 	wnd.ID = id
 	wnd.Location[0] = x
 	wnd.Location[1] = y
@@ -243,6 +244,9 @@ func (wnd *Window) getLastCmd() *cmdList {
 // buildFrame builds the background for the window
 func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 	style := DefaultStyle
+	var combos []float32
+	var indexes []uint32
+	var fc uint32
 
 	// get the first cmdList and insert the frame data into it
 	firstCmd := wnd.getFirstCmd()
@@ -271,17 +275,17 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		}
 
 		// render the title bar background
-		combos, indexes, fc := firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.TitleBarBgColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.TitleBarBgColor, wnd.Owner.whitePixelUv)
+		firstCmd.PrefixFaces(combos, indexes, fc)
+
+		// render the rest of the window background
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	} else {
 		// build the background of the window
-		combos, indexes, fc := firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	}
-
-	// render the rest of the window background
-	combos, indexes, fc := firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
-	firstCmd.PrefixFaces(combos, indexes, fc)
 
 	if wnd.ShowScrollBar {
 		// now add in the scroll bar at the end to overlay everything
