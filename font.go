@@ -228,6 +228,10 @@ type TextRenderData struct {
 // CreateText makes a new renderable object from the supplied string
 // using the data in the font. The data is returned as a TextRenderData object.
 func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderData {
+	// this is the texture ID of the font to use in the shader; by default
+	// the library always binds the font to the first texture sampler.
+	const floatTexturePosition = 0.0
+
 	// get the length of our message
 	msgLength := len(msg)
 
@@ -263,24 +267,28 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 		comboBuffer = append(comboBuffer, y0)
 		comboBuffer = append(comboBuffer, s1)
 		comboBuffer = append(comboBuffer, t0)
+		comboBuffer = append(comboBuffer, floatTexturePosition)
 		comboBuffer = append(comboBuffer, color[:]...)
 
 		comboBuffer = append(comboBuffer, x1)
 		comboBuffer = append(comboBuffer, y1)
 		comboBuffer = append(comboBuffer, s1)
 		comboBuffer = append(comboBuffer, t1)
+		comboBuffer = append(comboBuffer, floatTexturePosition)
 		comboBuffer = append(comboBuffer, color[:]...)
 
 		comboBuffer = append(comboBuffer, x0)
 		comboBuffer = append(comboBuffer, y1)
 		comboBuffer = append(comboBuffer, s0)
 		comboBuffer = append(comboBuffer, t1)
+		comboBuffer = append(comboBuffer, floatTexturePosition)
 		comboBuffer = append(comboBuffer, color[:]...)
 
 		comboBuffer = append(comboBuffer, x0)
 		comboBuffer = append(comboBuffer, y0)
 		comboBuffer = append(comboBuffer, s0)
 		comboBuffer = append(comboBuffer, t0)
+		comboBuffer = append(comboBuffer, floatTexturePosition)
 		comboBuffer = append(comboBuffer, color[:]...)
 
 		startIndex := uint32(chi) * 4

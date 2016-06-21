@@ -9,6 +9,7 @@ import (
 	"time"
 
 	glfw "github.com/go-gl/glfw/v3.1/glfw"
+	mgl "github.com/go-gl/mathgl/mgl32"
 
 	gui "github.com/tbogdala/eweygewey"
 	glfwinput "github.com/tbogdala/eweygewey/glfwinput"
@@ -155,8 +156,12 @@ func main() {
 	})
 	mainWindow.Title = "Widget Test"
 
-	imageTestWindow = uiman.NewWindow("ImageTest", 0.1, 0.25, 0.25, 0.25, func(wnd *gui.Window) {
-		wnd.Text(fmt.Sprintf("HI"))
+	font := uiman.GetFont("Default")
+	imgWDC, imgHDC := uiman.DisplayToScreen(float32(font.TextureSize), float32(font.TextureSize))
+
+	imageTestWindow = uiman.NewWindow("ImageTest", 0.0, imgHDC, imgWDC, imgHDC, func(wnd *gui.Window) {
+		imageTexIndex := uiman.AddTextureToStack(font.Texture)
+		wnd.Image("FontTexture", imgWDC, imgHDC, mgl.Vec4{1, 1, 1, 1}, imageTexIndex)
 	})
 	imageTestWindow.Title = "Image Test"
 	imageTestWindow.ShowTitleBar = false
@@ -165,6 +170,7 @@ func main() {
 	gfx.BlendEquation(graphics.FUNC_ADD)
 	gfx.BlendFunc(graphics.SRC_ALPHA, graphics.ONE_MINUS_SRC_ALPHA)
 	gfx.Enable(graphics.BLEND)
+	gfx.Enable(graphics.TEXTURE_2D)
 
 	// enter the renderloop
 	thisFrame = time.Now()

@@ -9,6 +9,10 @@ import (
 	mgl "github.com/go-gl/mathgl/mgl32"
 )
 
+const (
+	defaultTextureSampler = uint32(0)
+)
+
 // BuildCallback is a type for the function that builds the widgets for the window.
 type BuildCallback func(window *Window)
 
@@ -130,7 +134,6 @@ func (wnd *Window) construct() {
 	_, _, _, displayHeight := wnd.GetDisplaySize()
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - (frameHeight - displayHeight)
 
-
 	// invoke the callback to build the widgets for the window
 	if wnd.OnBuild != nil {
 		wnd.OnBuild(wnd)
@@ -149,10 +152,9 @@ func (wnd *Window) construct() {
 
 	// do we need to roll back the scroll bar change? has it overextended the
 	// bounds and need to be pulled back in?
-	if wnd.IsScrollable && wnd.ScrollOffset > (totalControlHeightDC - displayHeight) {
+	if wnd.IsScrollable && wnd.ScrollOffset > (totalControlHeightDC-displayHeight) {
 		wnd.ScrollOffset = totalControlHeightDC - displayHeight
 	}
-
 
 	// build the frame background for the window including title bar and scroll bar.
 	wnd.buildFrame(totalControlHeightDC)
@@ -275,23 +277,23 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		}
 
 		// render the title bar background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.TitleBarBgColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 
 		// render the rest of the window background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.BgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	} else {
 		// build the background of the window
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	}
 
 	if wnd.ShowScrollBar {
 		// now add in the scroll bar at the end to overlay everything
-		sbX := x+w-style.ScrollBarWidth
-		sbY := y-titleBarHeight
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX, sbY, x+w, y-h, style.ScrollBarBgColor, wnd.Owner.whitePixelUv)
+		sbX := x + w - style.ScrollBarWidth
+		sbY := y - titleBarHeight
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX, sbY, x+w, y-h, style.ScrollBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.AddFaces(combos, indexes, fc)
 
 		// figure out the positioning
@@ -302,7 +304,7 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		sbCursorOffX := (style.ScrollBarWidth - sbCursorWidth) / 2.0
 
 		// calculate the height required for the scrollbar
-		sbUsableHeight := h-titleBarHeight
+		sbUsableHeight := h - titleBarHeight
 		sbRatio := sbUsableHeight / totalControlHeightDC
 		sbCursorHeight := sbUsableHeight * sbRatio
 
@@ -310,7 +312,8 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		sbOffY := wnd.ScrollOffset * sbRatio
 
 		// draw the scroll bar cursor
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX + sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, y-sbOffY-sbCursorHeight, style.ScrollBarCursorColor, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX+sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, y-sbOffY-sbCursorHeight, style.ScrollBarCursorColor,
+			defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.AddFaces(combos, indexes, fc)
 
 	}
@@ -428,7 +431,7 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	}
 
 	// render the button background
-	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+buttonW, pos[1]-buttonH, bgColor, wnd.Owner.whitePixelUv)
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+buttonW, pos[1]-buttonH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 	cmd.AddFaces(combos, indexes, fc)
 
 	// create the text for the button
@@ -597,7 +600,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	bgColor := style.SliderBgColor
 
 	// render the widget background
-	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor, wnd.Owner.whitePixelUv)
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 	cmd.AddFaces(combos, indexes, fc)
 
 	if drawCursor {
@@ -611,7 +614,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 
 		// render the slider cursor
 		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
-			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor, wnd.Owner.whitePixelUv)
+			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		cmd.AddFaces(combos, indexes, fc)
 	}
 
@@ -625,6 +628,32 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	// advance the cursor for the width of the text widget
 	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + style.SliderMargin[0] + style.SliderMargin[1]
 	wnd.nextRowCursorOffset = sliderH + style.SliderMargin[2] + style.SliderMargin[3]
+
+	return nil
+}
+
+// Image draws the image widget on screen.
+func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, textureIndex uint32) error {
+	style := DefaultStyle
+	cmd := wnd.getLastCmd()
+
+	// get the font for the text
+	font := wnd.Owner.GetFont(style.FontName)
+	if font == nil {
+		return fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+	}
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
+
+	// render the button background
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+widthDC, pos[1]-heightDC, color, textureIndex, mgl.Vec4{0, 0, 1, 1})
+	cmd.AddFaces(combos, indexes, fc)
+
+	// advance the cursor for the width of the text widget
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + widthDC
+	wnd.nextRowCursorOffset = heightDC
 
 	return nil
 }

@@ -102,12 +102,13 @@ type Manager struct {
 	// the manager is constructing a new frame to draw.
 	frameStartCallbacks []FrameStartFunc
 
-	comboBuffer []float32
-	indexBuffer []uint32
-	comboVBO    graphics.Buffer
-	indexVBO    graphics.Buffer
-	vao         uint32
-	faceCount   uint32
+	comboBuffer  []float32
+	indexBuffer  []uint32
+	comboVBO     graphics.Buffer
+	indexVBO     graphics.Buffer
+	vao          uint32
+	faceCount    uint32
+	textureStack []graphics.Texture // cleared each frame
 }
 
 // NewManager is the constructor for the Manager type that will create
@@ -127,6 +128,7 @@ func NewManager(gfx graphics.GraphicsProvider) *Manager {
 	m.GetMousePositionDelta = func() (float32, float32) { return 0, 0 }
 	m.GetMouseButtonAction = func(buttonNumber int) int { return MouseUp }
 	m.frameStartCallbacks = []FrameStartFunc{}
+	m.textureStack = []graphics.Texture{}
 
 	return m
 }
@@ -150,6 +152,13 @@ func (ui *Manager) Initialize(vertShader, fragShader string, w, h, designH int32
 	ui.designHeight = designH
 
 	return nil
+}
+
+// AddTextureToStack adds a texture ID to the stack of textures the manager maintains
+// and returns it's index in the stack.
+func (ui *Manager) AddTextureToStack(texID graphics.Texture) uint32 {
+	ui.textureStack = append(ui.textureStack, texID)
+	return uint32(len(ui.textureStack) - 1)
 }
 
 // AdviseResolution will change the resolution the Manager uses to draw widgets.
@@ -231,6 +240,7 @@ func (ui *Manager) Construct() {
 	ui.indexBuffer = ui.indexBuffer[:0]
 	ui.faceCount = 0
 	ui.FrameStart = time.Now()
+	ui.textureStack = ui.textureStack[:0]
 
 	// call all of the frame start callbacks
 	for _, frameStartCB := range ui.frameStartCallbacks {
@@ -259,13 +269,16 @@ func (ui *Manager) Draw() {
 	const uintSize = 4
 	const posOffset = 0
 	const uvOffset = floatSize * 2
-	const colorOffset = floatSize * 4
-	const VBOStride = floatSize * (2 + 2 + 4) // vert / uv / color
+	const texIDOffset = floatSize * 4
+	const colorOffset = floatSize * 5
+	const VBOStride = floatSize * (2 + 2 + 1 + 4) // vert / uv / texID / color
 	gfx := ui.gfx
 
 	// FIXME: move the zdepth definitions elsewhere
 	const minZDepth = -100.0
 	const maxZDepth = 100.0
+
+	style := DefaultStyle
 
 	// for now, loop through all of the windows and copy all of the data into the manager's buffer
 	// FIXME: this could be buffered straight from the cmdList
@@ -297,13 +310,22 @@ func (ui *Manager) Draw() {
 	shaderViewMatrix := gfx.GetUniformLocation(ui.shader, "VIEW")
 	gfx.UniformMatrix4fv(shaderViewMatrix, 1, false, view)
 
-	shaderTex0 := gfx.GetUniformLocation(ui.shader, "TEX_0")
+	font := ui.GetFont(style.FontName)
+	shaderTex0 := gfx.GetUniformLocation(ui.shader, "TEX[0]")
 	if shaderTex0 >= 0 {
-		font := ui.GetFont(DefaultStyle.FontName)
 		if font != nil {
 			gfx.ActiveTexture(graphics.TEXTURE0)
 			gfx.BindTexture(graphics.TEXTURE_2D, font.Texture)
 			gfx.Uniform1i(shaderTex0, 0)
+		}
+	}
+	if len(ui.textureStack) > 0 {
+		for stackIdx, texID := range ui.textureStack {
+			uniStr := fmt.Sprintf("TEX[%d]", stackIdx+1)
+			texUniLoc := gfx.GetUniformLocation(ui.shader, uniStr)
+			gfx.ActiveTexture(graphics.TEXTURE0 + graphics.Texture(stackIdx+1))
+			gfx.BindTexture(graphics.TEXTURE_2D, texID)
+			gfx.Uniform1i(texUniLoc, int32(stackIdx+1))
 		}
 	}
 
@@ -319,6 +341,10 @@ func (ui *Manager) Draw() {
 	colorPosition := gfx.GetAttribLocation(ui.shader, "VERTEX_COLOR")
 	gfx.EnableVertexAttribArray(uint32(colorPosition))
 	gfx.VertexAttribPointer(uint32(colorPosition), 4, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(colorOffset))
+
+	texIDPosition := gfx.GetAttribLocation(ui.shader, "VERTEX_TEXTURE_ID")
+	gfx.EnableVertexAttribArray(uint32(texIDPosition))
+	gfx.VertexAttribPointer(uint32(texIDPosition), 1, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(texIDOffset))
 
 	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
 
@@ -394,9 +420,9 @@ func (ui *Manager) DisplayToScreen(xD, yD float32) (float32, float32) {
 // DrawRectFilled draws a rectangle in the user interface using a solid background.
 // Coordinate parameters should be passed in screen-normalized space. This gets
 // appended to the command list passed in.
-func (ui *Manager) DrawRectFilled(cmd *cmdList, xS, yS, wS, hS float32, color mgl.Vec4) {
+func (ui *Manager) DrawRectFilled(cmd *cmdList, xS, yS, wS, hS float32, color mgl.Vec4, textureIndex uint32) {
 	x, y := ui.ScreenToDisplay(xS, yS)
 	w, h := ui.ScreenToDisplay(wS, hS)
-	combos, indexes, fc := cmd.DrawRectFilledDC(x, y, x+w, y-h, color, ui.whitePixelUv)
+	combos, indexes, fc := cmd.DrawRectFilledDC(x, y, x+w, y-h, color, textureIndex, ui.whitePixelUv)
 	cmd.AddFaces(combos, indexes, fc)
 }

@@ -50,27 +50,31 @@ var (
   uniform mat4 VIEW;
   in vec3 VERTEX_POSITION;
   in vec2 VERTEX_UV;
+  in float VERTEX_TEXTURE_ID;
   in vec4 VERTEX_COLOR;
-  out vec3 vs_pos;
   out vec2 vs_uv;
   out vec4 vs_color;
+  out float vs_tex_id;
   void main()
   {
-    vs_pos = VERTEX_POSITION;
     vs_uv = VERTEX_UV;
     vs_color = VERTEX_COLOR;
+	vs_tex_id = VERTEX_TEXTURE_ID;
     gl_Position = VIEW * vec4(VERTEX_POSITION, 1.0);
   }`
 
 	// FragShader330 is the GLSL fragment shader program for the user interface.
+	// NOTE: 4 samplers is a hardcoded value now, but there's no reason it has to be that specifically.
 	FragShader330 = `#version 330
-  uniform sampler2D TEX_0;
+  uniform sampler2D TEX[4];
   in vec2 vs_uv;
   in vec4 vs_color;
+  in float vs_tex_id;
   out vec4 frag_color;
   void main()
   {
-	frag_color = vs_color * texture(TEX_0, vs_uv).rgba;
+  	int i = int(vs_tex_id);
+	frag_color = vs_color * texture(TEX[i], vs_uv).rgba;
   }`
 
 	// DefaultStyle is the default style to use for drawing widgets

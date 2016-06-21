@@ -13,7 +13,7 @@ import (
 type cmdList struct {
 	comboBuffer []float32        // vbo combo floats
 	indexBuffer []uint32         // vbo elements
-	faceCount   uint32              // face count
+	faceCount   uint32           // face count
 	clipRect    mgl.Vec4         // clip rect [x1,y1,x2,y2] top-left to bottom-right
 	textureID   graphics.Texture // texture to bind
 }
@@ -27,13 +27,12 @@ func newCmdList() *cmdList {
 	return cmds
 }
 
-
 // AddFaces takes the raw vertex attribute data in a float slice as well as the
 // element indexes and adds it to the internal buffers for rendering.
 func (cmds *cmdList) AddFaces(comboFloats []float32, indexInts []uint32, faceCount uint32) {
 	cmds.comboBuffer = append(cmds.comboBuffer, comboFloats...)
 
-    // manually adjust each index so that they don't collide with
+	// manually adjust each index so that they don't collide with
 	// existing element indexes
 	startIndex := cmds.faceCount * 2
 	for _, idx := range indexInts {
@@ -43,29 +42,27 @@ func (cmds *cmdList) AddFaces(comboFloats []float32, indexInts []uint32, faceCou
 	cmds.faceCount += faceCount
 }
 
-
 // PrefixFaces takes the raw vertex attribute data in a float slice as well as the
 // element indexes and adds it to the internal buffers for rendering at the begining.
 func (cmds *cmdList) PrefixFaces(comboFloats []float32, indexInts []uint32, faceCount uint32) {
 	cmds.comboBuffer = append(cmds.comboBuffer, comboFloats...)
 
-    // manually adjust each index so that they don't collide with
+	// manually adjust each index so that they don't collide with
 	// existing element indexes
-    temp := []uint32{}
+	temp := []uint32{}
 	startIndex := cmds.faceCount * 2
 	for _, idx := range indexInts {
 		temp = append(temp, startIndex+idx)
 	}
-    cmds.indexBuffer = append(temp, cmds.indexBuffer...)
+	cmds.indexBuffer = append(temp, cmds.indexBuffer...)
 
 	cmds.faceCount += faceCount
 }
 
-
 // DrawRectFilledDC draws a rectangle in the user interface using a solid background.
 // Coordinate parameters should be passed in display coordinates.
 // Returns the combo vertex data, element indexes and face count for the rect.
-func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4, whitePixelUv mgl.Vec4) ([]float32, []uint32, uint32) {
+func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4, textureIndex uint32, whitePixelUv mgl.Vec4) ([]float32, []uint32, uint32) {
 	uv := whitePixelUv
 
 	verts := [8]float32{
@@ -86,8 +83,8 @@ func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4
 		uv[2], uv[3],
 	}
 
-    comboBuffer := []float32{}
-    indexBuffer := []uint32{}
+	comboBuffer := []float32{}
+	indexBuffer := []uint32{}
 
 	// add the four vertices
 	for i := 0; i < 4; i++ {
@@ -98,6 +95,9 @@ func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4
 		// add the uv
 		comboBuffer = append(comboBuffer, uvs[i*2])
 		comboBuffer = append(comboBuffer, uvs[i*2+1])
+
+		// add the texture index to use in UV lookup
+		comboBuffer = append(comboBuffer, float32(textureIndex))
 
 		// add the color
 		comboBuffer = append(comboBuffer, color[:]...)
