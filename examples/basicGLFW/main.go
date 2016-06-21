@@ -22,6 +22,7 @@ const (
 	fontScale    = 18
 	fontFilepath = "../assets/Oswald-Heavy.ttf"
 	fontGlyphs   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890., :[]{}\\|<>;\"'~`?/-+_=()*&^%$#@!"
+	testImage = "../assets/potions.png"
 )
 
 var (
@@ -104,6 +105,13 @@ func main() {
 		panic("Failed to load the font file! " + err.Error())
 	}
 
+	// load a test image
+	potionsTex, err := fizzle.LoadImageToTexture(testImage)
+	if err != nil {
+		panic("Failed to load the texture: " + testImage + " " + err.Error())
+	}
+
+
 	// delcare the windows so that we can use them in the closures below
 	var testInt, testInt2 int
 	var mouseTestWindow, imageTestWindow, mainWindow *gui.Window
@@ -151,20 +159,22 @@ func main() {
 	//mouseTestWindow.AutoAdjustHeight = true
 
 	// create the test window for widgets
-	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.6, 0.5, 0.5, func(wnd *gui.Window) {
+	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.7, 0.5, 0.5, func(wnd *gui.Window) {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
 
-	font := uiman.GetFont("Default")
-	imgWDC, imgHDC := uiman.DisplayToScreen(float32(font.TextureSize), float32(font.TextureSize))
-
-	imageTestWindow = uiman.NewWindow("ImageTest", 0.0, imgHDC, imgWDC, imgHDC, func(wnd *gui.Window) {
-		imageTexIndex := uiman.AddTextureToStack(font.Texture)
-		wnd.Image("FontTexture", imgWDC, imgHDC, mgl.Vec4{1, 1, 1, 1}, imageTexIndex)
+	imgWS, imgHS := uiman.DisplayToScreen(16, 16)
+	imageTestWindow = uiman.NewWindow("ImageTest", 0.5-imgWS*4*2.5, imgHS*4, imgWS*4*5, imgHS*4, func(wnd *gui.Window) {
+		imageTexIndex := uiman.AddTextureToStack(potionsTex)
+		for i:=0; i<5; i++ {
+			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4, 0.5+float32(i)*0.1, 0.5, 0.6+float32(i)*0.1})
+		}
 	})
+
 	imageTestWindow.Title = "Image Test"
 	imageTestWindow.ShowTitleBar = false
+	mouseTestWindow.IsMoveable = false
 
 	// set some additional OpenGL flags
 	gfx.BlendEquation(graphics.FUNC_ADD)

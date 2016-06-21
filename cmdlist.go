@@ -79,7 +79,7 @@ func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4
 	uvs := [8]float32{
 		uv[0], uv[1],
 		uv[2], uv[1],
-		uv[1], uv[3],
+		uv[0], uv[3],
 		uv[2], uv[3],
 	}
 

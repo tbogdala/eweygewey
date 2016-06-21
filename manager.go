@@ -155,10 +155,11 @@ func (ui *Manager) Initialize(vertShader, fragShader string, w, h, designH int32
 }
 
 // AddTextureToStack adds a texture ID to the stack of textures the manager maintains
-// and returns it's index in the stack.
+// and returns it's index in the stack +1. In other words, this is a one-based
+// number scheme because 0 is reserved for the font.
 func (ui *Manager) AddTextureToStack(texID graphics.Texture) uint32 {
 	ui.textureStack = append(ui.textureStack, texID)
-	return uint32(len(ui.textureStack) - 1)
+	return uint32(len(ui.textureStack))
 }
 
 // AdviseResolution will change the resolution the Manager uses to draw widgets.
@@ -269,9 +270,9 @@ func (ui *Manager) Draw() {
 	const uintSize = 4
 	const posOffset = 0
 	const uvOffset = floatSize * 2
-	const texIDOffset = floatSize * 4
+	const texIdxOffset = floatSize * 4
 	const colorOffset = floatSize * 5
-	const VBOStride = floatSize * (2 + 2 + 1 + 4) // vert / uv / texID / color
+	const VBOStride = floatSize * (2 + 2 + 1 + 4) // vert / uv / texIndex / color
 	gfx := ui.gfx
 
 	// FIXME: move the zdepth definitions elsewhere
@@ -342,9 +343,9 @@ func (ui *Manager) Draw() {
 	gfx.EnableVertexAttribArray(uint32(colorPosition))
 	gfx.VertexAttribPointer(uint32(colorPosition), 4, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(colorOffset))
 
-	texIDPosition := gfx.GetAttribLocation(ui.shader, "VERTEX_TEXTURE_ID")
-	gfx.EnableVertexAttribArray(uint32(texIDPosition))
-	gfx.VertexAttribPointer(uint32(texIDPosition), 1, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(texIDOffset))
+	texIdxPosition := gfx.GetAttribLocation(ui.shader, "VERTEX_TEXTURE_INDEX")
+	gfx.EnableVertexAttribArray(uint32(texIdxPosition))
+	gfx.VertexAttribPointer(uint32(texIdxPosition), 1, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(texIdxOffset))
 
 	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
 

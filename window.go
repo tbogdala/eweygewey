@@ -633,7 +633,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 }
 
 // Image draws the image widget on screen.
-func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, textureIndex uint32) error {
+func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, textureIndex uint32, uvPair mgl.Vec4) error {
 	style := DefaultStyle
 	cmd := wnd.getLastCmd()
 
@@ -648,7 +648,7 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
 
 	// render the button background
-	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+widthDC, pos[1]-heightDC, color, textureIndex, mgl.Vec4{0, 0, 1, 1})
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+widthDC, pos[1]-heightDC, color, textureIndex, uvPair)
 	cmd.AddFaces(combos, indexes, fc)
 
 	// advance the cursor for the width of the text widget
