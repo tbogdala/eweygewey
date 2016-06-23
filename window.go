@@ -335,6 +335,9 @@ func (wnd *Window) StartRow() {
 	// adjust the widgetCursor if necessary to start a new row.
 	wnd.widgetCursorDC[0] = wnd.Style.WindowPadding[0]
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffsetDC
+
+	// clear out the next row height offset
+	wnd.nextRowCursorOffsetDC = 0.0
 }
 
 // getCursorDC returns the current cursor offset as an absolute location
@@ -381,6 +384,16 @@ func (wnd *Window) addCursorHorizontalDelta(hWidth float32) {
 	wnd.widgetCursorDC[0] += hWidth
 }
 
+// setNextRowCursorOffset specifies how much to change the cursor position
+// when a new row is started.
+func (wnd *Window) setNextRowCursorOffset(offset float32) {
+	// only set the next row offset if the one being passed in is greater
+	// than the offset recorded by other widgets
+	if offset > wnd.nextRowCursorOffsetDC {
+		wnd.nextRowCursorOffsetDC = offset
+	}
+}
+
 /*
 _    _  _____ ______  _____  _____  _____  _____
 | |  | ||_   _||  _  \|  __ \|  ___||_   _|/  ___|
@@ -410,7 +423,7 @@ func (wnd *Window) Text(msg string) error {
 
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(renderData.Width + wnd.Style.TextMargin[0] + wnd.Style.TextMargin[1])
-	wnd.nextRowCursorOffsetDC = renderData.Height + wnd.Style.TextMargin[2] + wnd.Style.TextMargin[3]
+	wnd.setNextRowCursorOffset(renderData.Height + wnd.Style.TextMargin[2] + wnd.Style.TextMargin[3])
 
 	return nil
 }
@@ -469,7 +482,7 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1])
-	wnd.nextRowCursorOffsetDC = buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3]
+	wnd.setNextRowCursorOffset(buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3])
 
 	return buttonPressed, nil
 }
@@ -599,7 +612,7 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 			return true, sliderW, sliderH
 		}
 
-		// try to claim focus
+		// try to claim focus -- wont work if something already claimed it this mouse press
 		mx, my := wnd.Owner.GetMouseDownPosition(0)
 		if mx > pos[0] && my > pos[1]-sliderH && mx < pos[0]+sliderW && my < pos[1] {
 			claimed := wnd.Owner.SetActiveInputID(id)
@@ -665,7 +678,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(sliderW + wnd.Style.SliderMargin[0] + wnd.Style.SliderMargin[1])
-	wnd.nextRowCursorOffsetDC = sliderH + wnd.Style.SliderMargin[2] + wnd.Style.SliderMargin[3]
+	wnd.setNextRowCursorOffset(sliderH + wnd.Style.SliderMargin[2] + wnd.Style.SliderMargin[3])
 
 	return nil
 }
@@ -692,7 +705,7 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(widthDC + wnd.Style.ImageMargin[0] + wnd.Style.ImageMargin[1])
-	wnd.nextRowCursorOffsetDC = heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3]
+	wnd.setNextRowCursorOffset(heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3])
 
 	return nil
 }
@@ -715,6 +728,81 @@ func (wnd *Window) Separator() {
 	cmd.AddFaces(combos, indexes, fc)
 
 	// start a new row
-	wnd.nextRowCursorOffsetDC = wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3]
+	wnd.setNextRowCursorOffset(wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3])
 	wnd.StartRow()
+}
+
+// Editbox creates an editbox control that changes the value string.
+func (wnd *Window) Editbox(id string, value *string) (bool, error) {
+	cmd := wnd.getLastCmd()
+
+	// get the font for the text
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
+	if font == nil {
+		return false, fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
+	}
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.EditboxMargin[0]
+	pos[1] -= wnd.Style.EditboxMargin[2]
+
+	// calculate the size necessary for the widget
+	_, _, wndWidth, _ := wnd.GetDisplaySize()
+	_, dimY, _ := font.GetRenderSize(*value)
+	editboxW := wndWidth - wnd.widgetCursorDC[0] - wnd.Style.WindowPadding[1] - wnd.Style.EditboxMargin[1]
+	editboxH := dimY + wnd.Style.EditboxPadding[2] + wnd.Style.EditboxPadding[3]
+
+	// set a default color for the button
+	bgColor := wnd.Style.EditboxBgColor
+
+	// test to see if the mouse is inside the widget
+	lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+	if lmbStatus != MouseUp {
+		// are  we already the active widget?
+		if wnd.Owner.GetActiveInputID() != id {
+			// try to claim focus -- wont work if something already claimed it this mouse press
+			mx, my := wnd.Owner.GetMouseDownPosition(0)
+			if mx > pos[0] && my > pos[1]-editboxH && mx < pos[0]+editboxW && my < pos[1] {
+				wnd.Owner.SetActiveInputID(id)
+				wnd.Owner.setActiveTextEditor(id, 0)
+			}
+		}
+	}
+
+	editorState := wnd.Owner.getActiveTextEditor()
+	if editorState != nil && editorState.ID == id {
+		// we're the active ditor so set the background color accordingly
+		bgColor = wnd.Style.EditboxActiveColor
+
+		// grab the key events
+		keyEvents := wnd.Owner.GetKeyEvents()
+		for _, event := range keyEvents {
+			if event.IsRune == false {
+				continue
+			}
+			tmp := *value
+			newString := tmp[:editorState.CursorOffset] + string(event.Rune) + tmp[editorState.CursorOffset:]
+			*value = newString
+			editorState.CursorOffset++
+		}
+
+	}
+
+	// render the button background
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+editboxW, pos[1]-editboxH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
+
+	// create the text for the button
+	textPos := pos
+	textPos[0] += wnd.Style.EditboxPadding[0]
+	textPos[1] -= wnd.Style.EditboxPadding[2]
+	renderData := font.CreateText(textPos, wnd.Style.EditboxTextColor, *value)
+	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+
+	// advance the cursor for the width of the text widget
+	wnd.addCursorHorizontalDelta(editboxW + wnd.Style.EditboxMargin[0] + wnd.Style.EditboxMargin[1])
+	wnd.setNextRowCursorOffset(editboxH + wnd.Style.EditboxMargin[2] + wnd.Style.EditboxMargin[3])
+
+	return true, nil
 }

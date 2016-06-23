@@ -178,6 +178,17 @@ func main() {
 	propertyTestWindow.ShowScrollBar = true
 	propertyTestWindow.IsScrollable = true
 
+	// create a simple window to house an editbox and a button
+	editString := "/c/gocode/src"
+	editboxWindow := uiman.NewWindow("EditboxWnd", 0.3, 0.9, 0.6, 0.0, func(wnd *gui.Window) {
+		wnd.Button("EditboxButton", "Press Me")
+		wnd.Editbox("Editbox1", &editString)
+		//wnd.Text("<------ EDITBOX HERE ------>")
+	})
+	editboxWindow.Title = "Editbox Test"
+	editboxWindow.ShowTitleBar = false
+	editboxWindow.AutoAdjustHeight = true
+
 	// create a log window
 	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.7, 0.5, 0.5, func(wnd *gui.Window) {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))

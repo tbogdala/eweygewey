@@ -24,6 +24,11 @@ type Style struct {
 	ButtonTextColor      mgl.Vec4 // button text color
 	ButtonMargin         mgl.Vec4 // [left,right,top,bottom] margin values for buttons
 	ButtonPadding        mgl.Vec4 // [left,right,top,bottom] padding values for buttons
+	EditboxBgColor       mgl.Vec4 // Editbox background color
+	EditboxActiveColor   mgl.Vec4 // Editbox background color when clicked
+	EditboxTextColor     mgl.Vec4 // Editbox text color
+	EditboxMargin        mgl.Vec4 // [left,right,top,bottom] margin values for Editbox
+	EditboxPadding       mgl.Vec4 // [left,right,top,bottom] padding values for Editbox
 	FontName             string   // font name to use by default
 	ImageMargin          mgl.Vec4 // margin for the image widgets
 	ScrollBarCursorColor mgl.Vec4 // the color of the cursor of the scroll bar
@@ -90,6 +95,11 @@ var (
 		ButtonTextColor:      ColorIToV(230, 230, 230, 255),
 		ButtonMargin:         mgl.Vec4{2, 2, 4, 4},
 		ButtonPadding:        mgl.Vec4{4, 4, 2, 2},
+		EditboxBgColor:       ColorIToV(128, 128, 128, 179),
+		EditboxActiveColor:   ColorIToV(204, 128, 120, 255),
+		EditboxTextColor:     ColorIToV(230, 230, 230, 255),
+		EditboxMargin:        mgl.Vec4{2, 2, 4, 4},
+		EditboxPadding:       mgl.Vec4{4, 4, 2, 2},
 		FontName:             "Default",
 		ImageMargin:          mgl.Vec4{0, 0, 0, 0},
 		ScrollBarCursorColor: ColorIToV(102, 102, 204, 77),

@@ -32,9 +32,23 @@ type GetMousePositionDeltaFunc func() (float32, float32)
 // The bool parameter indicate whether or not to return a cached value.
 type GetScrollWheelDeltaFunc func(bool) float32
 
+// GetKeyEventsFunc is the type of function to be called to get the slice of
+// currently buffered key press events
+type GetKeyEventsFunc func() []KeyPressEvent
+
 // FrameStartFunc is the type of function to be called when the manager is starting
 // a new frame to construct and draw.
 type FrameStartFunc func(startTime time.Time)
+
+// textEditState containst state information for the last widget that edits text
+// and can be used to store cursor position and other useful info.
+type textEditState struct {
+	// ID is the ID of the text widget claiming text edit state
+	ID string
+
+	// The number of runes in the buffer string to place the cursor after
+	CursorOffset int
+}
 
 // Manager holds all of the widgets and knows how to draw the UI.
 type Manager struct {
@@ -57,6 +71,13 @@ type Manager struct {
 	// GetScrollWheelDelta should be a function that returns the amount of
 	// change to the scroll wheel position that has happened since last check.
 	GetScrollWheelDelta GetScrollWheelDeltaFunc
+
+	// GetKeyEvents is the function to be called to get the slice of
+	// currently buffered key press events
+	GetKeyEvents GetKeyEventsFunc
+
+	// ClearKeyEvents is the function to be called to clear out the key press event buffer
+	ClearKeyEvents func()
 
 	// FrameStart is the time the UI manager's Construct() was called.
 	FrameStart time.Time
@@ -84,6 +105,10 @@ type Manager struct {
 
 	// activeInputID is the ID string of the widget that claimed input on mouse down.
 	activeInputID string
+
+	// activeTextEdit is the active text editing widget state; if set til nil
+	// then there are no text editing widgets with active input focus.
+	activeTextEdit *textEditState
 
 	// gfx is the underlying graphics implementation to be used for rendering.
 	gfx graphics.GraphicsProvider
@@ -212,10 +237,17 @@ func (ui *Manager) AddConstructionStartCallback(cb FrameStartFunc) {
 
 // SetActiveInputID sets the active input id which tells the user interface
 // which widget is currently claiming 'focus' for input. Returns a bool indicating
-// if the focus claim was successful
+// if the focus claim was successful because the input can be claimed only once
+// per UP->DOWN mouse transition.
 func (ui *Manager) SetActiveInputID(id string) bool {
 	if ui.activeInputID == "" || ui.GetMouseButtonAction(0) != MouseDown {
 		ui.activeInputID = id
+
+		// clear out the editor state if we select a different widget
+		if ui.activeTextEdit != nil && ui.activeInputID != ui.activeTextEdit.ID {
+			ui.activeTextEdit = nil
+		}
+
 		return true
 	}
 
@@ -230,6 +262,31 @@ func (ui *Manager) GetActiveInputID() string {
 // ClearActiveInputID clears any focus claims.
 func (ui *Manager) ClearActiveInputID() {
 	ui.activeInputID = ""
+}
+
+// setActiveTextEditor sets the active widget id which gets text editing input.
+// Returns a bool indicating if the claim for active text editor successed.
+func (ui *Manager) setActiveTextEditor(id string, cursorPos int) bool {
+	// already claimed, so sorry
+	if ui.activeTextEdit != nil {
+		return false
+	}
+
+	// claim the fresh focus
+	var ate textEditState
+	ate.ID = id
+	ate.CursorOffset = cursorPos
+	ui.activeTextEdit = &ate
+
+	// clear out the old key events
+	ui.ClearKeyEvents()
+
+	return true
+}
+
+// getActiveTextEditor returns the active text editor state if one is set.
+func (ui *Manager) getActiveTextEditor() *textEditState {
+	return ui.activeTextEdit
 }
 
 // Construct loops through all of the Windows in the Manager and creates

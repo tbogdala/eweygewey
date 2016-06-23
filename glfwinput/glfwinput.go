@@ -197,4 +197,137 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 		scrollWheelDelta += float32(yoff) * uiman.ScrollSpeed
 	})
 
+	// stores all of the key press events
+	keyBuffer := []gui.KeyPressEvent{}
+
+	// make a translation table from GLFW->EweyGewey key codes
+	keyTranslation := make(map[glfw.Key]int)
+	keyTranslation[glfw.KeyWorld1] = gui.EweyKeyWorld1
+	keyTranslation[glfw.KeyWorld2] = gui.EweyKeyWorld2
+	keyTranslation[glfw.KeyEscape] = gui.EweyKeyEscape
+	keyTranslation[glfw.KeyEnter] = gui.EweyKeyEnter
+	keyTranslation[glfw.KeyTab] = gui.EweyKeyTab
+	keyTranslation[glfw.KeyBackspace] = gui.EweyKeyBackspace
+	keyTranslation[glfw.KeyInsert] = gui.EweyKeyInsert
+	keyTranslation[glfw.KeyDelete] = gui.EweyKeyDelete
+	keyTranslation[glfw.KeyRight] = gui.EweyKeyRight
+	keyTranslation[glfw.KeyLeft] = gui.EweyKeyLeft
+	keyTranslation[glfw.KeyDown] = gui.EweyKeyDown
+	keyTranslation[glfw.KeyUp] = gui.EweyKeyUp
+	keyTranslation[glfw.KeyPageUp] = gui.EweyKeyPageUp
+	keyTranslation[glfw.KeyPageDown] = gui.EweyKeyPageDown
+	keyTranslation[glfw.KeyHome] = gui.EweyKeyHome
+	keyTranslation[glfw.KeyEnd] = gui.EweyKeyEnd
+	keyTranslation[glfw.KeyCapsLock] = gui.EweyKeyCapsLock
+	keyTranslation[glfw.KeyNumLock] = gui.EweyKeyNumLock
+	keyTranslation[glfw.KeyPrintScreen] = gui.EweyKeyPrintScreen
+	keyTranslation[glfw.KeyPause] = gui.EweyKeyPause
+	keyTranslation[glfw.KeyF1] = gui.EweyKeyF1
+	keyTranslation[glfw.KeyF2] = gui.EweyKeyF2
+	keyTranslation[glfw.KeyF3] = gui.EweyKeyF3
+	keyTranslation[glfw.KeyF4] = gui.EweyKeyF4
+	keyTranslation[glfw.KeyF5] = gui.EweyKeyF5
+	keyTranslation[glfw.KeyF6] = gui.EweyKeyF6
+	keyTranslation[glfw.KeyF7] = gui.EweyKeyF7
+	keyTranslation[glfw.KeyF8] = gui.EweyKeyF8
+	keyTranslation[glfw.KeyF9] = gui.EweyKeyF9
+	keyTranslation[glfw.KeyF10] = gui.EweyKeyF10
+	keyTranslation[glfw.KeyF11] = gui.EweyKeyF11
+	keyTranslation[glfw.KeyF12] = gui.EweyKeyF12
+	keyTranslation[glfw.KeyF13] = gui.EweyKeyF13
+	keyTranslation[glfw.KeyF14] = gui.EweyKeyF14
+	keyTranslation[glfw.KeyF15] = gui.EweyKeyF15
+	keyTranslation[glfw.KeyF16] = gui.EweyKeyF16
+	keyTranslation[glfw.KeyF17] = gui.EweyKeyF17
+	keyTranslation[glfw.KeyF18] = gui.EweyKeyF18
+	keyTranslation[glfw.KeyF19] = gui.EweyKeyF19
+	keyTranslation[glfw.KeyF20] = gui.EweyKeyF20
+	keyTranslation[glfw.KeyF21] = gui.EweyKeyF21
+	keyTranslation[glfw.KeyF22] = gui.EweyKeyF22
+	keyTranslation[glfw.KeyF23] = gui.EweyKeyF23
+	keyTranslation[glfw.KeyF24] = gui.EweyKeyF24
+	keyTranslation[glfw.KeyF25] = gui.EweyKeyF25
+	keyTranslation[glfw.KeyLeftShift] = gui.EweyKeyLeftShift
+	keyTranslation[glfw.KeyLeftAlt] = gui.EweyKeyLeftAlt
+	keyTranslation[glfw.KeyLeftControl] = gui.EweyKeyLeftControl
+	keyTranslation[glfw.KeyLeftSuper] = gui.EweyKeyLeftSuper
+	keyTranslation[glfw.KeyRightShift] = gui.EweyKeyRightShift
+	keyTranslation[glfw.KeyRightAlt] = gui.EweyKeyRightAlt
+	keyTranslation[glfw.KeyRightControl] = gui.EweyKeyRightControl
+	keyTranslation[glfw.KeyRightSuper] = gui.EweyKeyRightSuper
+
+	//keyTranslation[glfw.Key] = gui.EweyKey
+
+	// create our own handler for key input so that it can buffer the keys
+	// and then consume them in an edit box or whatever widget has focus.
+	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		if action != glfw.Press && action != glfw.Repeat {
+			return
+		}
+
+		// try to look it up in the translation table; if it exists, then we log
+		// the event; if it doesn't exist, then we assume it will be caught by
+		// the CharMods callback.
+		code, okay := keyTranslation[key]
+		if okay == false {
+			return
+		}
+
+		// we have a new event, so init the structure
+		var kpe gui.KeyPressEvent
+		kpe.KeyCode = code
+
+		// set the modifier flags
+		if mods|glfw.ModShift == glfw.ModShift {
+			kpe.ShiftDown = true
+		}
+		if mods|glfw.ModAlt == glfw.ModAlt {
+			kpe.AltDown = true
+		}
+		if mods|glfw.ModControl == glfw.ModControl {
+			kpe.CtrlDown = true
+		}
+		if mods|glfw.ModSuper == glfw.ModSuper {
+			kpe.SuperDown = true
+		}
+
+		// add it to the keys that have been buffered
+		keyBuffer = append(keyBuffer, kpe)
+	})
+
+	window.SetCharModsCallback(func(w *glfw.Window, char rune, mods glfw.ModifierKey) {
+		var kpe gui.KeyPressEvent
+
+		// set the character
+		kpe.Rune = char
+		kpe.IsRune = true
+
+		// set the modifier flags
+		if mods|glfw.ModShift == glfw.ModShift {
+			kpe.ShiftDown = true
+		}
+		if mods|glfw.ModAlt == glfw.ModAlt {
+			kpe.AltDown = true
+		}
+		if mods|glfw.ModControl == glfw.ModControl {
+			kpe.CtrlDown = true
+		}
+		if mods|glfw.ModSuper == glfw.ModSuper {
+			kpe.SuperDown = true
+		}
+
+		// add it to the keys that have been buffered
+		keyBuffer = append(keyBuffer, kpe)
+	})
+
+	uiman.GetKeyEvents = func() []gui.KeyPressEvent {
+		returnVal := keyBuffer
+		keyBuffer = keyBuffer[:0]
+		return returnVal
+	}
+
+	uiman.ClearKeyEvents = func() {
+		keyBuffer = keyBuffer[:0]
+	}
+
 }
