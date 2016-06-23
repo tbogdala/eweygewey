@@ -260,15 +260,15 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		// TODO: for now just add 1 pixel on each side of the string for padding
 		titleBarHeight = float32(dimY + 4)
 
+		// render the title bar background
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.Style.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		firstCmd.AddFaces(combos, indexes, fc)
+
 		// render the title bar text
 		if len(wnd.Title) > 0 {
 			renderData := font.CreateText(mgl.Vec3{x + wnd.Style.WindowPadding[0], y, 0}, wnd.Style.TitleBarTextColor, wnd.Title)
-			firstCmd.PrefixFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+			firstCmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 		}
-
-		// render the title bar background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.Style.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
-		firstCmd.PrefixFaces(combos, indexes, fc)
 
 		// render the rest of the window background
 		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.Style.WindowBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
@@ -296,13 +296,20 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		// calculate the height required for the scrollbar
 		sbUsableHeight := h - titleBarHeight
 		sbRatio := sbUsableHeight / totalControlHeightDC
+
+		// if we have more usable height than controls, just make the scrollbar
+		// take up the whole space.
+		if sbRatio >= 1.0 {
+			sbRatio = 1.0
+		}
+
 		sbCursorHeight := sbUsableHeight * sbRatio
 
 		// move the scroll bar down based on the scroll position
 		sbOffY := wnd.ScrollOffset * sbRatio
 
 		// draw the scroll bar cursor
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX+sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, y-sbOffY-sbCursorHeight, wnd.Style.ScrollBarCursorColor,
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX+sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, sbY-sbOffY-sbCursorHeight, wnd.Style.ScrollBarCursorColor,
 			defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.AddFaces(combos, indexes, fc)
 

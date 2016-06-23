@@ -110,7 +110,7 @@ var (
 		TextMargin:           mgl.Vec4{0, 0, 0, 0},
 		TextColor:            ColorIToV(230, 230, 230, 255),
 		TitleBarTextColor:    ColorIToV(230, 230, 230, 255),
-		TitleBarBgColor:      ColorIToV(69, 69, 138, 212),
+		TitleBarBgColor:      ColorIToV(69, 69, 138, 255),
 		WindowBgColor:        ColorIToV(0, 0, 0, 179),
 		WindowPadding:        mgl.Vec4{4, 4, 4, 4},
 	}

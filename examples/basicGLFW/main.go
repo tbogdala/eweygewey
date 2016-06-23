@@ -139,13 +139,17 @@ func main() {
 		} else if rmbAction == gui.MouseDown {
 			wnd.Text("RMB = DOWN")
 		}
+	})
+	mouseTestWindow.ShowTitleBar = false
+	mouseTestWindow.IsMoveable = false
+	mouseTestWindow.AutoAdjustHeight = true
 
+	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.05, 0.65, 0.2, 0.25, func(wnd *gui.Window) {
 		// throw a few test buttons into the mix
-		wnd.Separator()
-		wnd.Button("TestBtn0", "Show Cursor Pos")
-		wnd.Button("TestBtn1", "Test 1")
+		wnd.Button("TestBtn0", "Button0")
+		wnd.Button("TestBtn1", "Button1")
 
-		wnd.StartRow()
+		wnd.Separator()
 		wnd.SliderInt("IntSlider", &testInt, 0, 255)
 		wnd.StartRow()
 		wnd.SliderFloat("FloatSlider", &testFloat, 0, 1.0)
@@ -154,11 +158,12 @@ func main() {
 		wnd.StartRow()
 		wnd.DragSliderFloat("DragFloat", 0.1, &testFloat2)
 	})
-	mouseTestWindow.ShowTitleBar = false
-	mouseTestWindow.IsMoveable = false
-	mouseTestWindow.IsScrollable = true
-	mouseTestWindow.ShowScrollBar = true
-	//mouseTestWindow.AutoAdjustHeight = true
+	propertyTestWindow.Title = "Property Test"
+	propertyTestWindow.ShowTitleBar = true
+	propertyTestWindow.IsMoveable = true
+	propertyTestWindow.AutoAdjustHeight = false
+	propertyTestWindow.ShowScrollBar = true
+	propertyTestWindow.IsScrollable = true
 
 	// create a log window
 	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.7, 0.5, 0.5, func(wnd *gui.Window) {
