@@ -22,7 +22,7 @@ const (
 	fontScale    = 18
 	fontFilepath = "../assets/Oswald-Heavy.ttf"
 	fontGlyphs   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890., :[]{}\\|<>;\"'~`?/-+_=()*&^%$#@!"
-	testImage = "../assets/potions.png"
+	testImage    = "../assets/potions.png"
 )
 
 var (
@@ -111,7 +111,6 @@ func main() {
 		panic("Failed to load the texture: " + testImage + " " + err.Error())
 	}
 
-
 	// delcare the windows so that we can use them in the closures below
 	var testInt, testInt2 int
 	var mouseTestWindow, imageTestWindow, mainWindow *gui.Window
@@ -163,12 +162,13 @@ func main() {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
+	mainWindow.Style.WindowBgColor[3] = 1.0 // turn off transparent bg
 
 	imgWS, imgHS := uiman.DisplayToScreen(16, 16)
 	imageTestWindow = uiman.NewWindow("ImageTest", 0.5-imgWS*4*2.5, imgHS*4, imgWS*4*5, imgHS*4, func(wnd *gui.Window) {
 		imageTexIndex := uiman.AddTextureToStack(potionsTex)
-		for i:=0; i<5; i++ {
-			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4, 0.5+float32(i)*0.1, 0.5, 0.6+float32(i)*0.1})
+		for i := 0; i < 5; i++ {
+			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4, 0.5 + float32(i)*0.1, 0.5, 0.6 + float32(i)*0.1})
 		}
 	})
 

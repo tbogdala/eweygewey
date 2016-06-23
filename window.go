@@ -31,15 +31,6 @@ type Window struct {
 	// Height is how tall the window is in screen-normalized space.
 	Height float32
 
-	// BgColor is the background color of the window
-	BgColor mgl.Vec4
-
-	// TitleBarBgColor is the background color of the window title bar
-	TitleBarBgColor mgl.Vec4
-
-	// TitleBarTextColor is the background color of the window title bar text
-	TitleBarTextColor mgl.Vec4
-
 	// ShowScrollBar indicates if the scroll bar should be attached to the side
 	// of the window
 	ShowScrollBar bool
@@ -73,6 +64,9 @@ type Window struct {
 	// window hot to offset the controlls to give the scrolling effect.
 	ScrollOffset float32
 
+	// Style is the set of visual parameters to use when drawing this window.
+	Style
+
 	// widgetCursorDC is the current location to insert widgets and should
 	// be updated after adding new widgets. This is specified in display
 	// coordinates.
@@ -96,13 +90,11 @@ func newWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window
 	wnd.Location[1] = y
 	wnd.Width = w
 	wnd.Height = h
-	wnd.TitleBarTextColor = DefaultStyle.TitleBarTextColor
-	wnd.TitleBarBgColor = DefaultStyle.TitleBarBgColor
-	wnd.BgColor = DefaultStyle.WindowBgColor
 	wnd.OnBuild = constructor
 	wnd.ShowTitleBar = true
 	wnd.IsMoveable = true
 	//wnd.IsScrollable = false
+	wnd.Style = DefaultStyle
 	return wnd
 }
 
@@ -186,17 +178,16 @@ func (wnd *Window) GetDisplaySize() (float32, float32, float32, float32) {
 // coordinates and the width and height of the total window frame as well, including
 // the space window decorations take up like titlebar and scrollbar.
 func (wnd *Window) GetFrameSize() (float32, float32, float32, float32) {
-	style := DefaultStyle
 	winxDC, winyDC, winwDC, winhDC := wnd.GetDisplaySize()
 
 	// add in the size of the scroll bar if we're going to show it
 	if wnd.ShowScrollBar {
-		winwDC += style.ScrollBarWidth
+		winwDC += wnd.Style.ScrollBarWidth
 	}
 
 	// add the size of the title bar if it's visible
 	if wnd.ShowTitleBar {
-		font := wnd.Owner.GetFont(DefaultStyle.FontName)
+		font := wnd.Owner.GetFont(wnd.Style.FontName)
 		if font != nil {
 			_, dimY, _ := font.GetRenderSize(wnd.GetTitleString())
 			// TODO: for now just add 1 pixel on each side of the string for padding
@@ -245,7 +236,6 @@ func (wnd *Window) getLastCmd() *cmdList {
 
 // buildFrame builds the background for the window
 func (wnd *Window) buildFrame(totalControlHeightDC float32) {
-	style := DefaultStyle
 	var combos []float32
 	var indexes []uint32
 	var fc uint32
@@ -264,7 +254,7 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		if len(wnd.Title) > 0 {
 			titleString = wnd.Title
 		}
-		font := wnd.Owner.GetFont(style.FontName)
+		font := wnd.Owner.GetFont(wnd.Style.FontName)
 		_, dimY, _ := font.GetRenderSize(titleString)
 
 		// TODO: for now just add 1 pixel on each side of the string for padding
@@ -272,36 +262,36 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 
 		// render the title bar text
 		if len(wnd.Title) > 0 {
-			renderData := font.CreateText(mgl.Vec3{x, y, 0}, wnd.TitleBarTextColor, wnd.Title)
+			renderData := font.CreateText(mgl.Vec3{x, y, 0}, wnd.Style.TitleBarTextColor, wnd.Title)
 			firstCmd.PrefixFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 		}
 
 		// render the title bar background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.Style.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 
 		// render the rest of the window background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.BgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.Style.WindowBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	} else {
 		// build the background of the window
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.BgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-h, wnd.Style.WindowBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	}
 
 	if wnd.ShowScrollBar {
 		// now add in the scroll bar at the end to overlay everything
-		sbX := x + w - style.ScrollBarWidth
+		sbX := x + w - wnd.Style.ScrollBarWidth
 		sbY := y - titleBarHeight
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX, sbY, x+w, y-h, style.ScrollBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX, sbY, x+w, y-h, wnd.Style.ScrollBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.AddFaces(combos, indexes, fc)
 
 		// figure out the positioning
-		sbCursorWidth := style.ScrollBarCursorWidth
-		if sbCursorWidth > style.ScrollBarWidth {
-			sbCursorWidth = style.ScrollBarWidth
+		sbCursorWidth := wnd.Style.ScrollBarCursorWidth
+		if sbCursorWidth > wnd.Style.ScrollBarWidth {
+			sbCursorWidth = wnd.Style.ScrollBarWidth
 		}
-		sbCursorOffX := (style.ScrollBarWidth - sbCursorWidth) / 2.0
+		sbCursorOffX := (wnd.Style.ScrollBarWidth - sbCursorWidth) / 2.0
 
 		// calculate the height required for the scrollbar
 		sbUsableHeight := h - titleBarHeight
@@ -312,7 +302,7 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		sbOffY := wnd.ScrollOffset * sbRatio
 
 		// draw the scroll bar cursor
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX+sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, y-sbOffY-sbCursorHeight, style.ScrollBarCursorColor,
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(sbX+sbCursorOffX, sbY-sbOffY, x+w-sbCursorOffX, y-sbOffY-sbCursorHeight, wnd.Style.ScrollBarCursorColor,
 			defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.AddFaces(combos, indexes, fc)
 
