@@ -75,7 +75,9 @@ Current Features
 * Widgets:
     * Text
     * Buttons
-    * Sliders for ints and floats
+    * Sliders for integers and floats
+    * Scroll bars
+    * Images
 
 TODO
 ----
@@ -85,9 +87,8 @@ The following need to be addressed in order to start releases:
 * more widgets:
     * single/multi-line text editbox
     * combobox
-    * images
+    * image buttons
     * custom widgets
-    * scroll bars
 * detailed theming (e.g. custom drawing of slider cursor)
 * documentation
 * samples

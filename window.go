@@ -118,13 +118,13 @@ func (wnd *Window) construct() {
 	}
 
 	// reset the cursor for the window
-	wnd.widgetCursorDC = mgl.Vec3{0, wnd.ScrollOffset, 0}
+	wnd.widgetCursorDC = mgl.Vec3{wnd.Style.WindowPadding[0], wnd.ScrollOffset, 0}
 	wnd.nextRowCursorOffset = 0
 
 	// advance the cursor to account for the title bar
 	_, _, _, frameHeight := wnd.GetFrameSize()
 	_, _, _, displayHeight := wnd.GetDisplaySize()
-	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - (frameHeight - displayHeight)
+	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - (frameHeight - displayHeight) - wnd.WindowPadding[2]
 
 	// invoke the callback to build the widgets for the window
 	if wnd.OnBuild != nil {
@@ -134,7 +134,7 @@ func (wnd *Window) construct() {
 	// calculate the height all of the controls would need to draw. this can be
 	// used to automatically resize the window and will be used to draw a correctly
 	// proportioned scroll bar cursor.
-	totalControlHeightDC := -wnd.widgetCursorDC[1] + wnd.nextRowCursorOffset + wnd.ScrollOffset
+	totalControlHeightDC := -wnd.widgetCursorDC[1] + wnd.nextRowCursorOffset + wnd.ScrollOffset + wnd.WindowPadding[3]
 	_, totalControlHeightS := wnd.Owner.DisplayToScreen(0.0, totalControlHeightDC)
 
 	// are we going to fit the height of the window to the height of the controls?
@@ -322,7 +322,7 @@ func (wnd *Window) ContainsPosition(x, y float32) bool {
 // StartRow starts a new row of widgets in the window.
 func (wnd *Window) StartRow() {
 	// adjust the widgetCursor if necessary to start a new row.
-	wnd.widgetCursorDC[0] = 0.0
+	wnd.widgetCursorDC[0] = wnd.Style.WindowPadding[0]
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffset
 }
 
@@ -334,11 +334,6 @@ func (wnd *Window) getCursorDC() mgl.Vec3 {
 	windowDx, windowDy := wnd.Owner.ScreenToDisplay(wnd.Location[0], wnd.Location[1])
 	pos[0] += windowDx
 	pos[1] += windowDy
-
-	// add in any padding
-	style := DefaultStyle
-	pos[0] += style.WindowPadding[0]
-	pos[1] += style.WindowPadding[2]
 
 	return pos
 }
@@ -355,52 +350,50 @@ _    _  _____ ______  _____  _____  _____  _____
 
 // Text renders a text widget
 func (wnd *Window) Text(msg string) error {
-	style := DefaultStyle
 	cmd := wnd.getLastCmd()
 
 	// get the font for the text
-	font := wnd.Owner.GetFont(style.FontName)
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
-		return fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+		return fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
 	}
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
 
 	// create the text widget itself
-	renderData := font.CreateText(pos, style.TextColor, msg)
+	renderData := font.CreateText(pos, wnd.Style.TextColor, msg)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + renderData.Width
-	wnd.nextRowCursorOffset = renderData.Height
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + renderData.Width + wnd.Style.TextMargin[0] + wnd.Style.TextMargin[1]
+	wnd.nextRowCursorOffset = renderData.Height + wnd.Style.TextMargin[2] + wnd.Style.TextMargin[3]
 
 	return nil
 }
 
 // Button draws the button widget on screen with the given text.
 func (wnd *Window) Button(id string, text string) (bool, error) {
-	style := DefaultStyle
 	cmd := wnd.getLastCmd()
 
 	// get the font for the text
-	font := wnd.Owner.GetFont(style.FontName)
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
-		return false, fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+		return false, fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
 	}
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
-	pos[0] += style.ButtonMargin[0]
-	pos[1] -= style.ButtonMargin[2]
+	pos[0] += wnd.Style.ButtonMargin[0]
+	pos[1] -= wnd.Style.ButtonMargin[2]
 
 	// calculate the size necessary for the widget
 	dimX, dimY, _ := font.GetRenderSize(text)
-	buttonW := dimX + style.ButtonPadding[0] + style.ButtonPadding[1]
-	buttonH := dimY + style.ButtonPadding[2] + style.ButtonPadding[3]
+	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1]
+	buttonH := dimY + wnd.Style.ButtonPadding[2] + wnd.Style.ButtonPadding[3]
 
 	// set a default color for the button
-	bgColor := style.ButtonColor
+	bgColor := wnd.Style.ButtonColor
 	buttonPressed := false
 
 	// test to see if the mouse is inside the widget
@@ -408,12 +401,12 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	if mx > pos[0] && my > pos[1]-buttonH && mx < pos[0]+buttonW && my < pos[1] {
 		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
 		if lmbStatus == MouseUp {
-			bgColor = style.ButtonHoverColor
+			bgColor = wnd.Style.ButtonHoverColor
 		} else {
 			// mouse is down, but was it pressed inside the button?
 			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
 			if mdx > pos[0] && mdy > pos[1]-buttonH && mdx < pos[0]+buttonW && mdy < pos[1] {
-				bgColor = style.ButtonActiveColor
+				bgColor = wnd.Style.ButtonActiveColor
 				buttonPressed = true
 				wnd.Owner.SetActiveInputID(id)
 			}
@@ -426,14 +419,14 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// create the text for the button
 	textPos := pos
-	textPos[0] += style.ButtonPadding[0]
-	textPos[1] -= style.ButtonPadding[2]
-	renderData := font.CreateText(textPos, style.ButtonTextColor, text)
+	textPos[0] += wnd.Style.ButtonPadding[0]
+	textPos[1] -= wnd.Style.ButtonPadding[2]
+	renderData := font.CreateText(textPos, wnd.Style.ButtonTextColor, text)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + buttonW + style.ButtonMargin[0] + style.ButtonMargin[1]
-	wnd.nextRowCursorOffset = buttonH + style.ButtonMargin[2] + style.ButtonMargin[3]
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1]
+	wnd.nextRowCursorOffset = buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3]
 
 	return buttonPressed, nil
 }
@@ -442,7 +435,6 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 // values provided.
 func (wnd *Window) SliderFloat(id string, value *float32, min, max float32) error {
 	var valueString string
-	style := DefaultStyle
 	sliderPressed, sliderW, _ := wnd.sliderHitTest(id)
 
 	// we have a mouse down in the widget, so check to see how much the mouse has
@@ -464,7 +456,7 @@ func (wnd *Window) SliderFloat(id string, value *float32, min, max float32) erro
 	cursorRel := *value
 	cursorRel = (cursorRel - min) / (max - min)
 
-	valueString = fmt.Sprintf(style.SliderFloatFormat, *value)
+	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
 	return wnd.sliderBehavior(valueString, cursorRel, true)
 }
 
@@ -472,7 +464,6 @@ func (wnd *Window) SliderFloat(id string, value *float32, min, max float32) erro
 // values provided.
 func (wnd *Window) SliderInt(id string, value *int, min, max int) error {
 	var valueString string
-	style := DefaultStyle
 	sliderPressed, sliderW, _ := wnd.sliderHitTest(id)
 
 	// we have a mouse down in the widget, so check to see how much the mouse has
@@ -493,7 +484,7 @@ func (wnd *Window) SliderInt(id string, value *int, min, max int) error {
 	// get the position / size for the slider
 	cursorRel := float32(*value-min) / float32(max-min)
 
-	valueString = fmt.Sprintf(style.SliderIntFormat, *value)
+	valueString = fmt.Sprintf(wnd.Style.SliderIntFormat, *value)
 	return wnd.sliderBehavior(valueString, cursorRel, true)
 }
 
@@ -501,7 +492,6 @@ func (wnd *Window) SliderInt(id string, value *int, min, max int) error {
 // movement only.
 func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
 	var valueString string
-	style := DefaultStyle
 	sliderPressed, _, _ := wnd.sliderHitTest(id)
 
 	// we have a mouse down in the widget, so check to see how much the mouse has
@@ -511,7 +501,7 @@ func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
 		*value += int(mouseDeltaX * speed)
 	}
 
-	valueString = fmt.Sprintf(style.SliderIntFormat, *value)
+	valueString = fmt.Sprintf(wnd.Style.SliderIntFormat, *value)
 	return wnd.sliderBehavior(valueString, 0.0, false)
 }
 
@@ -520,28 +510,26 @@ func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
 // as a convenience it also returns the width and height of the control
 // as the second and third results respectively.
 func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
-	style := DefaultStyle
-
 	// get the font for the text
-	font := wnd.Owner.GetFont(style.FontName)
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
 		return false, 0, 0
 	}
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
-	pos[0] += style.SliderMargin[0]
-	pos[1] -= style.SliderMargin[2]
+	pos[0] += wnd.Style.SliderMargin[0]
+	pos[1] -= wnd.Style.SliderMargin[2]
 
 	// calculate the size necessary for the widget
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
 	dimY := float32(font.GlyphHeight) * font.GetCurrentScale()
-	sliderW := wndWidth - style.WindowPadding[0] - style.WindowPadding[1] - style.SliderMargin[0] - style.SliderMargin[1]
-	sliderH := dimY + style.SliderPadding[2] + style.SliderPadding[3]
+	sliderW := wndWidth - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
+	sliderH := dimY + wnd.Style.SliderPadding[2] + wnd.Style.SliderPadding[3]
 
 	// calculate how much of the slider control is available to the cursor for
 	// movement, which affects the scale of the value to edit.
-	sliderW = sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
+	sliderW = sliderW - wnd.Style.SliderCursorWidth - wnd.Style.SliderPadding[0] - wnd.Style.SliderPadding[1]
 
 	// test to see if the mouse is inside the widget
 	lmbStatus := wnd.Owner.GetMouseButtonAction(0)
@@ -566,28 +554,27 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 
 // sliderBehavior is the actual action of drawing the slider widget.
 func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCursor bool) error {
-	style := DefaultStyle
 	cmd := wnd.getLastCmd()
 
 	// get the font for the text
-	font := wnd.Owner.GetFont(style.FontName)
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
-		return fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+		return fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
 	}
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
-	pos[0] += style.SliderMargin[0]
-	pos[1] -= style.SliderMargin[2]
+	pos[0] += wnd.Style.SliderMargin[0]
+	pos[1] -= wnd.Style.SliderMargin[2]
 
 	// calculate the size necessary for the widget
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
 	dimX, dimY, _ := font.GetRenderSize(valueString)
-	sliderW := wndWidth - style.WindowPadding[0] - style.WindowPadding[1] - style.SliderMargin[0] - style.SliderMargin[1]
-	sliderH := dimY + style.SliderPadding[2] + style.SliderPadding[3]
+	sliderW := wndWidth - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
+	sliderH := dimY + wnd.Style.SliderPadding[2] + wnd.Style.SliderPadding[3]
 
 	// set a default color for the background
-	bgColor := style.SliderBgColor
+	bgColor := wnd.Style.SliderBgColor
 
 	// render the widget background
 	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+sliderW, pos[1]-sliderH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
@@ -596,41 +583,41 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	if drawCursor {
 		// calculate how much of the slider control is available to the cursor for
 		// movement, which affects the scale of the value to edit.
-		sliderRangeW := sliderW - style.SliderCursorWidth - style.SliderPadding[0] - style.SliderPadding[1]
-		cursorH := sliderH - style.SliderPadding[2] - style.SliderPadding[3]
+		sliderRangeW := sliderW - wnd.Style.SliderCursorWidth - wnd.Style.SliderPadding[0] - wnd.Style.SliderPadding[1]
+		cursorH := sliderH - wnd.Style.SliderPadding[2] - wnd.Style.SliderPadding[3]
 
 		// get the position / size for the slider
-		cursorPosX := valueRatio*sliderRangeW + style.SliderPadding[0]
+		cursorPosX := valueRatio*sliderRangeW + wnd.Style.SliderPadding[0]
 
 		// render the slider cursor
-		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-style.SliderPadding[2],
-			pos[0]+cursorPosX+style.SliderCursorWidth, pos[1]-cursorH-style.SliderPadding[3], style.SliderCursorColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+cursorPosX, pos[1]-wnd.Style.SliderPadding[2],
+			pos[0]+cursorPosX+wnd.Style.SliderCursorWidth, pos[1]-cursorH-wnd.Style.SliderPadding[3],
+			wnd.Style.SliderCursorColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		cmd.AddFaces(combos, indexes, fc)
 	}
 
 	// create the text for the slider
 	textPos := pos
-	textPos[0] += style.SliderPadding[0] + (0.5 * sliderW) - (0.5 * dimX)
-	textPos[1] -= style.SliderPadding[2]
-	renderData := font.CreateText(textPos, style.SliderTextColor, valueString)
+	textPos[0] += wnd.Style.SliderPadding[0] + (0.5 * sliderW) - (0.5 * dimX)
+	textPos[1] -= wnd.Style.SliderPadding[2]
+	renderData := font.CreateText(textPos, wnd.Style.SliderTextColor, valueString)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + style.SliderMargin[0] + style.SliderMargin[1]
-	wnd.nextRowCursorOffset = sliderH + style.SliderMargin[2] + style.SliderMargin[3]
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + wnd.Style.SliderMargin[0] + wnd.Style.SliderMargin[1]
+	wnd.nextRowCursorOffset = sliderH + wnd.Style.SliderMargin[2] + wnd.Style.SliderMargin[3]
 
 	return nil
 }
 
 // Image draws the image widget on screen.
 func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, textureIndex uint32, uvPair mgl.Vec4) error {
-	style := DefaultStyle
 	cmd := wnd.getLastCmd()
 
 	// get the font for the text
-	font := wnd.Owner.GetFont(style.FontName)
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
-		return fmt.Errorf("Couldn't access font %s from the Manager.", style.FontName)
+		return fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
 	}
 
 	// calculate the location for the widget
@@ -642,8 +629,8 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 	cmd.AddFaces(combos, indexes, fc)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + widthDC
-	wnd.nextRowCursorOffset = heightDC
+	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + widthDC + wnd.Style.ImageMargin[0] + wnd.Style.ImageMargin[1]
+	wnd.nextRowCursorOffset = heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3]
 
 	return nil
 }

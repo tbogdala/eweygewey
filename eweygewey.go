@@ -25,6 +25,7 @@ type Style struct {
 	ButtonMargin         mgl.Vec4 // [left,right,top,bottom] margin values for buttons
 	ButtonPadding        mgl.Vec4 // [left,right,top,bottom] padding values for buttons
 	FontName             string   // font name to use by default
+	ImageMargin          mgl.Vec4 // margin for the image widgets
 	ScrollBarCursorColor mgl.Vec4 // the color of the cursor of the scroll bar
 	ScrollBarBgColor     mgl.Vec4 // the color of the background of the scroll bar
 	ScrollBarWidth       float32  // the width of the scroll bar
@@ -38,6 +39,7 @@ type Style struct {
 	SliderTextColor      mgl.Vec4 // slider text color
 	SliderCursorWidth    float32  // slider cursor width
 	TextColor            mgl.Vec4 // text color
+	TextMargin           mgl.Vec4 // margin for text widgets
 	TitleBarTextColor    mgl.Vec4 // text color
 	TitleBarBgColor      mgl.Vec4 // window background color
 	WindowBgColor        mgl.Vec4 // window background color
@@ -86,6 +88,7 @@ var (
 		ButtonMargin:         mgl.Vec4{2, 2, 4, 4},
 		ButtonPadding:        mgl.Vec4{4, 4, 2, 2},
 		FontName:             "Default",
+		ImageMargin:          mgl.Vec4{0, 0, 0, 0},
 		ScrollBarCursorColor: ColorIToV(102, 102, 204, 77),
 		ScrollBarBgColor:     ColorIToV(51, 64, 77, 153),
 		ScrollBarWidth:       16.0,
@@ -98,11 +101,12 @@ var (
 		SliderPadding:        mgl.Vec4{2, 2, 2, 2},
 		SliderTextColor:      ColorIToV(230, 230, 230, 255),
 		SliderCursorWidth:    15.0,
+		TextMargin:           mgl.Vec4{0, 0, 0, 0},
 		TextColor:            ColorIToV(230, 230, 230, 255),
 		TitleBarTextColor:    ColorIToV(230, 230, 230, 255),
 		TitleBarBgColor:      ColorIToV(69, 69, 138, 212),
 		WindowBgColor:        ColorIToV(0, 0, 0, 179),
-		WindowPadding:        mgl.Vec4{0, 0, 0, 0},
+		WindowPadding:        mgl.Vec4{4, 4, 4, 4},
 	}
 )
 

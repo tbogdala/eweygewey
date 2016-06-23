@@ -157,24 +157,29 @@ func main() {
 	mouseTestWindow.ShowScrollBar = true
 	//mouseTestWindow.AutoAdjustHeight = true
 
-	// create the test window for widgets
+	// create a log window
 	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.7, 0.5, 0.5, func(wnd *gui.Window) {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
 	mainWindow.Style.WindowBgColor[3] = 1.0 // turn off transparent bg
 
+	// make a toolbar style window at the bottom center of the screen showing
+	// five test images.
 	imgWS, imgHS := uiman.DisplayToScreen(16, 16)
 	imageTestWindow = uiman.NewWindow("ImageTest", 0.5-imgWS*4*2.5, imgHS*4, imgWS*4*5, imgHS*4, func(wnd *gui.Window) {
 		imageTexIndex := uiman.AddTextureToStack(potionsTex)
+		const offset = 0.1 / 16.0 / 2.0
 		for i := 0; i < 5; i++ {
-			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4, 0.5 + float32(i)*0.1, 0.5, 0.6 + float32(i)*0.1})
+			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4 - offset, 0.5 + float32(i)*0.1 - offset, 0.5 - offset, 0.6 + float32(i)*0.1 - offset})
 		}
 	})
 
 	imageTestWindow.Title = "Image Test"
 	imageTestWindow.ShowTitleBar = false
-	mouseTestWindow.IsMoveable = false
+	imageTestWindow.IsMoveable = false
+	imageTestWindow.Style.WindowBgColor[3] = 0.0               // transparent
+	imageTestWindow.Style.WindowPadding = mgl.Vec4{0, 0, 0, 0} // no padding
 
 	// set some additional OpenGL flags
 	gfx.BlendEquation(graphics.FUNC_ADD)
