@@ -30,6 +30,9 @@ type Style struct {
 	ScrollBarBgColor     mgl.Vec4 // the color of the background of the scroll bar
 	ScrollBarWidth       float32  // the width of the scroll bar
 	ScrollBarCursorWidth float32  // the width of the scroll bar cursor
+	SeparatorColor       mgl.Vec4 // the color of the separator bar
+	SeparatorHeight      float32  // the height of the separator rectangle
+	SeparatorMargin      mgl.Vec4 // the margin for the separator rectangle
 	SliderBgColor        mgl.Vec4 // slider background color
 	SliderCursorColor    mgl.Vec4 // slider cursor color
 	SliderFloatFormat    string   // formatting string for the float value in a slider
@@ -93,6 +96,9 @@ var (
 		ScrollBarBgColor:     ColorIToV(51, 64, 77, 153),
 		ScrollBarWidth:       16.0,
 		ScrollBarCursorWidth: 10.0,
+		SeparatorColor:       ColorIToV(230, 230, 230, 255),
+		SeparatorHeight:      1.0,
+		SeparatorMargin:      mgl.Vec4{4, 4, 4, 4},
 		SliderBgColor:        ColorIToV(128, 128, 128, 179),
 		SliderCursorColor:    ColorIToV(179, 179, 179, 179),
 		SliderFloatFormat:    "%0.3f",

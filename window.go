@@ -262,7 +262,7 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 
 		// render the title bar text
 		if len(wnd.Title) > 0 {
-			renderData := font.CreateText(mgl.Vec3{x, y, 0}, wnd.Style.TitleBarTextColor, wnd.Title)
+			renderData := font.CreateText(mgl.Vec3{x + wnd.Style.WindowPadding[0], y, 0}, wnd.Style.TitleBarTextColor, wnd.Title)
 			firstCmd.PrefixFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 		}
 
@@ -326,6 +326,8 @@ func (wnd *Window) StartRow() {
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffset
 }
 
+// getCursorDC returns the current cursor offset as an absolute location
+// in the user interface.
 func (wnd *Window) getCursorDC() mgl.Vec3 {
 	// start with the widget DC offet
 	pos := wnd.widgetCursorDC
@@ -505,6 +507,23 @@ func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
 	return wnd.sliderBehavior(valueString, 0.0, false)
 }
 
+// DragSliderFloat creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderFloat(id string, speed float32, value *float32) error {
+	var valueString string
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += mouseDeltaX * speed
+	}
+
+	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
+}
+
 // sliderHitTest calculates the size of the widget and then
 // returns true if mouse is within the bounding box of this widget;
 // as a convenience it also returns the width and height of the control
@@ -622,6 +641,8 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.ImageMargin[0]
+	pos[1] += wnd.Style.ImageMargin[2]
 	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
 
 	// render the button background
@@ -633,4 +654,26 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 	wnd.nextRowCursorOffset = heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3]
 
 	return nil
+}
+
+// Separator draws a separator rectangle and advances the cursor to a new row automatically.
+func (wnd *Window) Separator() {
+	wnd.StartRow()
+	cmd := wnd.getLastCmd()
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.SeparatorMargin[0]
+	pos[1] -= wnd.Style.SeparatorMargin[2]
+
+	_, _, widthDC, _ := wnd.GetDisplaySize()
+	widthDC += -wnd.Style.SeparatorMargin[0] - wnd.Style.SeparatorMargin[1] - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1]
+
+	// draw the separator
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+widthDC, pos[1]-wnd.Style.SeparatorHeight, wnd.Style.SeparatorColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
+
+	// start a new row
+	wnd.nextRowCursorOffset = wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3]
+	wnd.StartRow()
 }

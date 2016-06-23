@@ -113,10 +113,11 @@ func main() {
 
 	// delcare the windows so that we can use them in the closures below
 	var testInt, testInt2 int
+	var testFloat, testFloat2 float32
 	var mouseTestWindow, imageTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.25, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.35, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -140,16 +141,18 @@ func main() {
 		}
 
 		// throw a few test buttons into the mix
-		wnd.StartRow()
+		wnd.Separator()
 		wnd.Button("TestBtn0", "Show Cursor Pos")
 		wnd.Button("TestBtn1", "Test 1")
 
-		//wnd.StartRow()
-		//wnd.SliderFloat("FloatSlider", &mainWindow.Width, 0.0, 1.0)
 		wnd.StartRow()
 		wnd.SliderInt("IntSlider", &testInt, 0, 255)
 		wnd.StartRow()
+		wnd.SliderFloat("FloatSlider", &testFloat, 0, 1.0)
+		wnd.StartRow()
 		wnd.DragSliderInt("DragInt", 0.5, &testInt2)
+		wnd.StartRow()
+		wnd.DragSliderFloat("DragFloat", 0.1, &testFloat2)
 	})
 	mouseTestWindow.ShowTitleBar = false
 	mouseTestWindow.IsMoveable = false
@@ -174,7 +177,6 @@ func main() {
 			wnd.Image("FontTexture", imgWS*4, imgHS*4, mgl.Vec4{1, 1, 1, 1}, imageTexIndex, mgl.Vec4{0.4 - offset, 0.5 + float32(i)*0.1 - offset, 0.5 - offset, 0.6 + float32(i)*0.1 - offset})
 		}
 	})
-
 	imageTestWindow.Title = "Image Test"
 	imageTestWindow.ShowTitleBar = false
 	imageTestWindow.IsMoveable = false
