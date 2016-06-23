@@ -72,10 +72,11 @@ Current Features
 * Basic windowing system
 * Basic theming support
 * Basic input support that detects mouse clicks and double-clicks
+* Basic scaling for larger resolutions
 * Widgets:
     * Text
     * Buttons
-    * Sliders for integers and floats
+    * Sliders for integers and floats with ranges and without
     * Scroll bars
     * Images
 
@@ -85,11 +86,16 @@ TODO
 The following need to be addressed in order to start releases:
 
 * more widgets:
+    * text wrapping
     * single/multi-line text editbox
     * combobox
     * image buttons
     * custom widgets
 * detailed theming (e.g. custom drawing of slider cursor)
+* texture atlas creation
+* z-ordering for windows
+* scroll bars don't scroll on mouse drag
+* better OpenGL flag management
 * documentation
 * samples
 

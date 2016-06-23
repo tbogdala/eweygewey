@@ -72,9 +72,13 @@ type Window struct {
 	// coordinates.
 	widgetCursorDC mgl.Vec3
 
-	// nextRowCursorOffset is the value the widgetCursorDC's y component
+	// nextRowCursorOffsetDC is the value the widgetCursorDC's y component
 	// should change for the next widget that starts a new row in the window.
-	nextRowCursorOffset float32
+	nextRowCursorOffsetDC float32
+
+	// requestedItemWidthMinDC is set by the client code to adjust the width of the
+	// next control to be at least a specific size.
+	requestedItemWidthMinDC float32
 
 	// cmds is the slice of cmdLists used to to render the window
 	cmds []*cmdList
@@ -119,7 +123,7 @@ func (wnd *Window) construct() {
 
 	// reset the cursor for the window
 	wnd.widgetCursorDC = mgl.Vec3{wnd.Style.WindowPadding[0], wnd.ScrollOffset, 0}
-	wnd.nextRowCursorOffset = 0
+	wnd.nextRowCursorOffsetDC = 0
 
 	// advance the cursor to account for the title bar
 	_, _, _, frameHeight := wnd.GetFrameSize()
@@ -134,7 +138,7 @@ func (wnd *Window) construct() {
 	// calculate the height all of the controls would need to draw. this can be
 	// used to automatically resize the window and will be used to draw a correctly
 	// proportioned scroll bar cursor.
-	totalControlHeightDC := -wnd.widgetCursorDC[1] + wnd.nextRowCursorOffset + wnd.ScrollOffset + wnd.WindowPadding[3]
+	totalControlHeightDC := -wnd.widgetCursorDC[1] + wnd.nextRowCursorOffsetDC + wnd.ScrollOffset + wnd.WindowPadding[3]
 	_, totalControlHeightS := wnd.Owner.DisplayToScreen(0.0, totalControlHeightDC)
 
 	// are we going to fit the height of the window to the height of the controls?
@@ -330,7 +334,7 @@ func (wnd *Window) ContainsPosition(x, y float32) bool {
 func (wnd *Window) StartRow() {
 	// adjust the widgetCursor if necessary to start a new row.
 	wnd.widgetCursorDC[0] = wnd.Style.WindowPadding[0]
-	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffset
+	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffsetDC
 }
 
 // getCursorDC returns the current cursor offset as an absolute location
@@ -345,6 +349,36 @@ func (wnd *Window) getCursorDC() mgl.Vec3 {
 	pos[1] += windowDy
 
 	return pos
+}
+
+// RequestItemWidthMin will request the window to draw the next widget with the
+// specified window-normalized size (e.g. if Window's width is 500 px, then passing
+// 0.25 here translates to 125 px).
+func (wnd *Window) RequestItemWidthMin(nextMinWS float32) {
+	// clip the incoming value
+	reqMin := ClipF32(0.0, 1.0, nextMinWS)
+
+	// calc the amount of window width we're requesting
+	_, _, wndW, _ := wnd.GetDisplaySize()
+
+	// convert this to display space
+	wnd.requestedItemWidthMinDC = reqMin * wndW
+}
+
+// addCursorHorizontalDelta sets the amount the cursor will to change
+// laterally based on wether or not the client code requested a minimum size.
+func (wnd *Window) addCursorHorizontalDelta(hWidth float32) {
+	// we have request, so expand the width if necessary
+	if wnd.requestedItemWidthMinDC > 0.0 {
+		if wnd.requestedItemWidthMinDC > hWidth {
+			hWidth = wnd.requestedItemWidthMinDC
+		}
+
+		// reset the request to make it a one-off operation
+		wnd.requestedItemWidthMinDC = 0.0
+	}
+
+	wnd.widgetCursorDC[0] += hWidth
 }
 
 /*
@@ -375,8 +409,8 @@ func (wnd *Window) Text(msg string) error {
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + renderData.Width + wnd.Style.TextMargin[0] + wnd.Style.TextMargin[1]
-	wnd.nextRowCursorOffset = renderData.Height + wnd.Style.TextMargin[2] + wnd.Style.TextMargin[3]
+	wnd.addCursorHorizontalDelta(renderData.Width + wnd.Style.TextMargin[0] + wnd.Style.TextMargin[1])
+	wnd.nextRowCursorOffsetDC = renderData.Height + wnd.Style.TextMargin[2] + wnd.Style.TextMargin[3]
 
 	return nil
 }
@@ -434,8 +468,8 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1]
-	wnd.nextRowCursorOffset = buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3]
+	wnd.addCursorHorizontalDelta(buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1])
+	wnd.nextRowCursorOffsetDC = buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3]
 
 	return buttonPressed, nil
 }
@@ -596,7 +630,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	// calculate the size necessary for the widget
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
 	dimX, dimY, _ := font.GetRenderSize(valueString)
-	sliderW := wndWidth - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
+	sliderW := wndWidth - wnd.widgetCursorDC[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[1]
 	sliderH := dimY + wnd.Style.SliderPadding[2] + wnd.Style.SliderPadding[3]
 
 	// set a default color for the background
@@ -630,8 +664,8 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + sliderW + wnd.Style.SliderMargin[0] + wnd.Style.SliderMargin[1]
-	wnd.nextRowCursorOffset = sliderH + wnd.Style.SliderMargin[2] + wnd.Style.SliderMargin[3]
+	wnd.addCursorHorizontalDelta(sliderW + wnd.Style.SliderMargin[0] + wnd.Style.SliderMargin[1])
+	wnd.nextRowCursorOffsetDC = sliderH + wnd.Style.SliderMargin[2] + wnd.Style.SliderMargin[3]
 
 	return nil
 }
@@ -657,8 +691,8 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 	cmd.AddFaces(combos, indexes, fc)
 
 	// advance the cursor for the width of the text widget
-	wnd.widgetCursorDC[0] = wnd.widgetCursorDC[0] + widthDC + wnd.Style.ImageMargin[0] + wnd.Style.ImageMargin[1]
-	wnd.nextRowCursorOffset = heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3]
+	wnd.addCursorHorizontalDelta(widthDC + wnd.Style.ImageMargin[0] + wnd.Style.ImageMargin[1])
+	wnd.nextRowCursorOffsetDC = heightDC + wnd.Style.ImageMargin[2] + wnd.Style.ImageMargin[3]
 
 	return nil
 }
@@ -681,6 +715,6 @@ func (wnd *Window) Separator() {
 	cmd.AddFaces(combos, indexes, fc)
 
 	// start a new row
-	wnd.nextRowCursorOffset = wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3]
+	wnd.nextRowCursorOffsetDC = wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3]
 	wnd.StartRow()
 }

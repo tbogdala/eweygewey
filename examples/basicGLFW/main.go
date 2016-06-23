@@ -144,18 +144,31 @@ func main() {
 	mouseTestWindow.IsMoveable = false
 	mouseTestWindow.AutoAdjustHeight = true
 
+	// create a window that looks a bit like a property editor
 	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.05, 0.65, 0.2, 0.25, func(wnd *gui.Window) {
 		// throw a few test buttons into the mix
 		wnd.Button("TestBtn0", "Button0")
 		wnd.Button("TestBtn1", "Button1")
 
+		const colWidth = 0.33
 		wnd.Separator()
+		wnd.RequestItemWidthMin(colWidth)
+		wnd.Text("Int Slider")
 		wnd.SliderInt("IntSlider", &testInt, 0, 255)
+
 		wnd.StartRow()
+		wnd.RequestItemWidthMin(colWidth)
+		wnd.Text("Slider Big Label")
 		wnd.SliderFloat("FloatSlider", &testFloat, 0, 1.0)
+
 		wnd.StartRow()
+		wnd.RequestItemWidthMin(colWidth)
+		wnd.Text("Int Drag")
 		wnd.DragSliderInt("DragInt", 0.5, &testInt2)
+
 		wnd.StartRow()
+		wnd.RequestItemWidthMin(colWidth)
+		wnd.Text("Float Drag")
 		wnd.DragSliderFloat("DragFloat", 0.1, &testFloat2)
 	})
 	propertyTestWindow.Title = "Property Test"

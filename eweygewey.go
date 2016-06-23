@@ -121,3 +121,14 @@ var (
 func ColorIToV(r, g, b, a int) mgl.Vec4 {
 	return mgl.Vec4{float32(r) / 255.0, float32(g) / 255.0, float32(b) / 255.0, float32(a) / 255.0}
 }
+
+// ClipF32 returns a value that is between the closed interval of [min .. max].
+func ClipF32(min, max, value float32) float32 {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}
