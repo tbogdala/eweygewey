@@ -69,7 +69,7 @@ func renderFrame(frameDelta float64) {
 	// draw the user interface
 	gfx.Disable(graphics.DEPTH_TEST)
 	gfx.Enable(graphics.SCISSOR_TEST)
-	uiman.Construct()
+	uiman.Construct(frameDelta)
 	uiman.Draw()
 	gfx.Disable(graphics.SCISSOR_TEST)
 	gfx.Enable(graphics.DEPTH_TEST)

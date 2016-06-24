@@ -11,31 +11,6 @@ import (
 	graphics "github.com/tbogdala/fizzle/graphicsprovider"
 )
 
-// GetMousePositionFunc is the type of function to be called to get the mouse position.
-type GetMousePositionFunc func() (float32, float32)
-
-// GetMouseDownPositionFunc is the type of function to be called that takes a button number
-// to query and should return the location of the mouse when that button transitioned
-// from UP->DOWN.
-type GetMouseDownPositionFunc func(buttonNumber int) (float32, float32)
-
-// GetMouseButtonActionFunc is the type of function to be called that takes a button number
-// to query and should return an enumeration value like MouseUp, MouseDown, etc...
-type GetMouseButtonActionFunc func(buttonNumber int) int
-
-// GetMousePositionDeltaFunc is the type of function to be called to get the
-// last amount of change in the mouse position.
-type GetMousePositionDeltaFunc func() (float32, float32)
-
-// GetScrollWheelDeltaFunc is the type of function to be called to get the
-// amount of change that has happened to the mouse scroll wheel since last check.
-// The bool parameter indicate whether or not to return a cached value.
-type GetScrollWheelDeltaFunc func(bool) float32
-
-// GetKeyEventsFunc is the type of function to be called to get the slice of
-// currently buffered key press events
-type GetKeyEventsFunc func() []KeyPressEvent
-
 // FrameStartFunc is the type of function to be called when the manager is starting
 // a new frame to construct and draw.
 type FrameStartFunc func(startTime time.Time)
@@ -48,39 +23,54 @@ type textEditState struct {
 
 	// The number of runes in the buffer string to place the cursor after
 	CursorOffset int
+
+	// CursorTimer tracks the amount of time since the start of the last blink
+	// episode of the cursor. The cursor should be shown during the interval
+	// [0 .. Style.EditboxBlinkDuration].
+	CursorTimer float32
 }
 
 // Manager holds all of the widgets and knows how to draw the UI.
 type Manager struct {
 	// GetMousePosition should be a function that returns the current mouse
 	// position for the application.
-	GetMousePosition GetMousePositionFunc
+	GetMousePosition func() (float32, float32)
 
 	// GetMouseDownPosition should be a function that returns the mouse position
 	// stored for when the button made the transition from UP->DOWN.
-	GetMouseDownPosition GetMouseDownPositionFunc
+	GetMouseDownPosition func(buttonNumber int) (float32, float32)
 
 	// GetMousePositionDelta should be a function that returns the amount
 	// of change in the mouse position.
-	GetMousePositionDelta GetMousePositionDeltaFunc
+	GetMousePositionDelta func() (float32, float32)
 
 	// GetMouseButtonAction should be a function that returns the state
 	// of a mouse button: MouseUp | MouseDown | MouseRepeat.
-	GetMouseButtonAction GetMouseButtonActionFunc
+	GetMouseButtonAction func(buttonNumber int) int
 
 	// GetScrollWheelDelta should be a function that returns the amount of
 	// change to the scroll wheel position that has happened since last check.
-	GetScrollWheelDelta GetScrollWheelDeltaFunc
+	GetScrollWheelDelta func(bool) float32
 
 	// GetKeyEvents is the function to be called to get the slice of
 	// currently buffered key press events
-	GetKeyEvents GetKeyEventsFunc
+	GetKeyEvents func() []KeyPressEvent
 
 	// ClearKeyEvents is the function to be called to clear out the key press event buffer
 	ClearKeyEvents func()
 
+	// GetClipboardString returns a possible string from the clipboarnd and
+	// possibly an error.
+	GetClipboardString func() (string, error)
+
+	// SetClipboardString sets a string in the system clipboard.
+	SetClipboardString func(string)
+
 	// FrameStart is the time the UI manager's Construct() was called.
 	FrameStart time.Time
+
+	// FrameDelta is the time between frames as given to Construct().
+	FrameDelta float64
 
 	// ScrollSpeed is how much each move of the scroll wheel should be magnified
 	ScrollSpeed float32
@@ -289,16 +279,22 @@ func (ui *Manager) getActiveTextEditor() *textEditState {
 	return ui.activeTextEdit
 }
 
+// clearActiveTextEditor will remove the active text editor from tracking.
+func (ui *Manager) clearActiveTextEditor() {
+	ui.activeTextEdit = nil
+}
+
 // Construct loops through all of the Windows in the Manager and creates
 // all of the widgets and their data. This function does not buffer the
 // result to VBO or do the actual rendering -- call Draw() for that.
-func (ui *Manager) Construct() {
+func (ui *Manager) Construct(frameDelta float64) {
 	// reset the display data
 	ui.comboBuffer = ui.comboBuffer[:0]
 	ui.indexBuffer = ui.indexBuffer[:0]
 	ui.faceCount = 0
 	ui.FrameStart = time.Now()
 	ui.textureStack = ui.textureStack[:0]
+	ui.FrameDelta = frameDelta
 
 	// call all of the frame start callbacks
 	for _, frameStartCB := range ui.frameStartCallbacks {

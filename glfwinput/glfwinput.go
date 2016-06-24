@@ -265,30 +265,41 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 			return
 		}
 
+		// we have a new event, so init the structure
+		var kpe gui.KeyPressEvent
+
 		// try to look it up in the translation table; if it exists, then we log
 		// the event; if it doesn't exist, then we assume it will be caught by
 		// the CharMods callback.
 		code, okay := keyTranslation[key]
 		if okay == false {
-			return
-		}
+			// there are some exceptions to this that will get implemented here.
+			// when ctrl is held down, it doesn't appear that runes get sent
+			// through the CharModsCallback function, so we must handle the
+			// ones we want here.
+			if (key == glfw.KeyV) && (mods&glfw.ModControl == glfw.ModControl) {
+				kpe.Rune = 'V'
+				kpe.IsRune = true
+				kpe.CtrlDown = true
+			} else {
+				return
+			}
+		} else {
+			kpe.KeyCode = code
 
-		// we have a new event, so init the structure
-		var kpe gui.KeyPressEvent
-		kpe.KeyCode = code
-
-		// set the modifier flags
-		if mods|glfw.ModShift == glfw.ModShift {
-			kpe.ShiftDown = true
-		}
-		if mods|glfw.ModAlt == glfw.ModAlt {
-			kpe.AltDown = true
-		}
-		if mods|glfw.ModControl == glfw.ModControl {
-			kpe.CtrlDown = true
-		}
-		if mods|glfw.ModSuper == glfw.ModSuper {
-			kpe.SuperDown = true
+			// set the modifier flags
+			if mods&glfw.ModShift == glfw.ModShift {
+				kpe.ShiftDown = true
+			}
+			if mods&glfw.ModAlt == glfw.ModAlt {
+				kpe.AltDown = true
+			}
+			if mods&glfw.ModControl == glfw.ModControl {
+				kpe.CtrlDown = true
+			}
+			if mods&glfw.ModSuper == glfw.ModSuper {
+				kpe.SuperDown = true
+			}
 		}
 
 		// add it to the keys that have been buffered
@@ -297,22 +308,23 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 
 	window.SetCharModsCallback(func(w *glfw.Window, char rune, mods glfw.ModifierKey) {
 		var kpe gui.KeyPressEvent
+		//fmt.Printf("SetCharModsCallback Rune: %v | mods:%v | ctrl: %v\n", char, mods, mods&glfw.ModControl)
 
 		// set the character
 		kpe.Rune = char
 		kpe.IsRune = true
 
 		// set the modifier flags
-		if mods|glfw.ModShift == glfw.ModShift {
+		if mods&glfw.ModShift == glfw.ModShift {
 			kpe.ShiftDown = true
 		}
-		if mods|glfw.ModAlt == glfw.ModAlt {
+		if mods&glfw.ModAlt == glfw.ModAlt {
 			kpe.AltDown = true
 		}
-		if mods|glfw.ModControl == glfw.ModControl {
+		if mods&glfw.ModControl == glfw.ModControl {
 			kpe.CtrlDown = true
 		}
-		if mods|glfw.ModSuper == glfw.ModSuper {
+		if mods&glfw.ModSuper == glfw.ModSuper {
 			kpe.SuperDown = true
 		}
 
@@ -330,4 +342,11 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 		keyBuffer = keyBuffer[:0]
 	}
 
+	uiman.GetClipboardString = func() (string, error) {
+		return window.GetClipboardString()
+	}
+
+	uiman.SetClipboardString = func(clippy string) {
+		window.SetClipboardString(clippy)
+	}
 }

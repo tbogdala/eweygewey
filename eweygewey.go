@@ -26,6 +26,10 @@ type Style struct {
 	ButtonPadding        mgl.Vec4 // [left,right,top,bottom] padding values for buttons
 	EditboxBgColor       mgl.Vec4 // Editbox background color
 	EditboxActiveColor   mgl.Vec4 // Editbox background color when clicked
+	EditboxCursorColor   mgl.Vec4 // color for the editbox cursor
+	EditboxCursorWidth   float32  // width of the editbox cursor in pixels
+	EditboxBlinkDuration float32  // how long the cursor is visible during a blink (in seconds)
+	EditboxBlinkInterval float32  // how many seconds between the start of the cursor blink (in seconds)
 	EditboxTextColor     mgl.Vec4 // Editbox text color
 	EditboxMargin        mgl.Vec4 // [left,right,top,bottom] margin values for Editbox
 	EditboxPadding       mgl.Vec4 // [left,right,top,bottom] padding values for Editbox
@@ -97,6 +101,10 @@ var (
 		ButtonPadding:        mgl.Vec4{4, 4, 2, 2},
 		EditboxBgColor:       ColorIToV(128, 128, 128, 179),
 		EditboxActiveColor:   ColorIToV(204, 128, 120, 255),
+		EditboxCursorColor:   ColorIToV(230, 230, 230, 255),
+		EditboxCursorWidth:   3.0,
+		EditboxBlinkDuration: 0.25,
+		EditboxBlinkInterval: 1.0,
 		EditboxTextColor:     ColorIToV(230, 230, 230, 255),
 		EditboxMargin:        mgl.Vec4{2, 2, 4, 4},
 		EditboxPadding:       mgl.Vec4{4, 4, 2, 2},

@@ -214,6 +214,52 @@ func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
 	return w, float32(f.GlyphHeight) * fontScale, h
 }
 
+// OffsetFloor returns the maximum width offset that will fit between characters that
+// is still smaller than the offset passed in.
+func (f *Font) OffsetFloor(msg string, offset float32) float32 {
+	var w float32
+
+	// see how much to scale the size based on current resolution vs desgin resolution
+	fontScale := f.GetCurrentScale()
+
+	for _, ch := range msg {
+		// get the rune data
+		chData := f.locations[ch]
+
+		// break if we go over the distance
+		if w+(float32(chData.advanceWidth)*fontScale) > offset {
+			break
+		}
+		w += float32(chData.advanceWidth) * fontScale
+	}
+
+	return w
+}
+
+// OffsetForIndex returns the width offset that will fit just before the `stopIndex`
+// number character in the msg.
+func (f *Font) OffsetForIndex(msg string, stopIndex int) float32 {
+	var w float32
+
+	// see how much to scale the size based on current resolution vs desgin resolution
+	fontScale := f.GetCurrentScale()
+
+	for i, ch := range msg {
+		// calculate up to the stopIndex but do not include it
+		if i >= stopIndex {
+			break
+		}
+
+		// get the rune data
+		chData := f.locations[ch]
+
+		// break if we go over the distance
+		w += float32(chData.advanceWidth) * fontScale
+	}
+
+	return w
+}
+
 // TextRenderData is a structure containing the raw OpenGL VBO data needed
 // to render a text string for a given texture.
 type TextRenderData struct {

@@ -770,6 +770,8 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 		}
 	}
 
+	// see if we're the active editor. if so, then we can consume the key events;
+	// otherwise we leave them be.
 	editorState := wnd.Owner.getActiveTextEditor()
 	if editorState != nil && editorState.ID == id {
 		// we're the active ditor so set the background color accordingly
@@ -779,12 +781,62 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 		keyEvents := wnd.Owner.GetKeyEvents()
 		for _, event := range keyEvents {
 			if event.IsRune == false {
-				continue
+				// all of these keys reset the timer if it doesn't lose focus, so
+				// just reset it here for convenience
+				editorState.CursorTimer = 0.0
+
+				// handle the key events specially in their own way
+				switch event.KeyCode {
+				case EweyKeyRight:
+					if editorState.CursorOffset < len(*value)-1 {
+						editorState.CursorOffset++
+					}
+				case EweyKeyLeft:
+					if editorState.CursorOffset > 0 {
+						editorState.CursorOffset--
+					}
+				case EweyKeyBackspace:
+					// erase the rune previous to the cursor
+					if editorState.CursorOffset > 0 {
+						newString := (*value)[:editorState.CursorOffset-1] + (*value)[editorState.CursorOffset:]
+						*value = newString
+						editorState.CursorOffset--
+					}
+				case EweyKeyDelete:
+					// erase the rune just after the cursor
+					if editorState.CursorOffset < len(*value) {
+						newString := (*value)[:editorState.CursorOffset] + (*value)[editorState.CursorOffset+1:]
+						*value = newString
+					}
+				case EweyKeyEnter, EweyKeyEscape:
+					// give up the focus voluntarily here
+					wnd.Owner.clearActiveTextEditor()
+					wnd.Owner.ClearActiveInputID()
+					editorState = nil
+				case EweyKeyEnd:
+					editorState.CursorOffset = len(*value)
+				case EweyKeyHome:
+					editorState.CursorOffset = 0
+				case EweyKeyInsert:
+					if event.ShiftDown {
+						clippy, _ := wnd.Owner.GetClipboardString()
+						newString := (*value)[:editorState.CursorOffset] + clippy + (*value)[editorState.CursorOffset:]
+						*value = newString
+					}
+				}
+			} else {
+				// do some special testing for clipboard commands
+				if event.Rune == 'V' && event.CtrlDown {
+					clippy, _ := wnd.Owner.GetClipboardString()
+					newString := (*value)[:editorState.CursorOffset] + clippy + (*value)[editorState.CursorOffset:]
+					*value = newString
+				} else {
+					// insert the rune into the value string
+					newString := (*value)[:editorState.CursorOffset] + string(event.Rune) + (*value)[editorState.CursorOffset:]
+					*value = newString
+					editorState.CursorOffset++
+				}
 			}
-			tmp := *value
-			newString := tmp[:editorState.CursorOffset] + string(event.Rune) + tmp[editorState.CursorOffset:]
-			*value = newString
-			editorState.CursorOffset++
 		}
 
 	}
@@ -799,6 +851,28 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	textPos[1] -= wnd.Style.EditboxPadding[2]
 	renderData := font.CreateText(textPos, wnd.Style.EditboxTextColor, *value)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+
+	// if we're the active editor, deal with drawing the cursor here
+	if editorState != nil && editorState.ID == id {
+		// add the current delta to the timer
+		editorState.CursorTimer += float32(wnd.Owner.FrameDelta)
+
+		// did we overflow the blink interval? if so, reset the timer
+		if editorState.CursorTimer > wnd.Style.EditboxBlinkInterval {
+			editorState.CursorTimer -= wnd.Style.EditboxBlinkInterval
+		}
+
+		// draw the cursor if we're within the blink duration
+		if editorState.CursorTimer < wnd.Style.EditboxBlinkDuration {
+			cursorOffsetDC := font.OffsetForIndex(*value, editorState.CursorOffset)
+			cursorOffsetDC += wnd.Style.EditboxPadding[0]
+
+			// render the editbox cursor
+			combos, indexes, fc := cmd.DrawRectFilledDC(pos[0]+cursorOffsetDC, pos[1], pos[0]+cursorOffsetDC+wnd.Style.EditboxCursorWidth, pos[1]-editboxH,
+				wnd.Style.EditboxCursorColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+			cmd.AddFaces(combos, indexes, fc)
+		}
+	}
 
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(editboxW + wnd.Style.EditboxMargin[0] + wnd.Style.EditboxMargin[1])
