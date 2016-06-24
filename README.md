@@ -79,6 +79,8 @@ Current Features
     * Sliders for integers and floats with ranges and without
     * Scroll bars
     * Images
+    * Editbox
+    * Custom drawn 3d widgets
 
 TODO
 ----
@@ -87,14 +89,15 @@ The following need to be addressed in order to start releases:
 
 * more widgets:
     * text wrapping
-    * single/multi-line text editbox
+    * multi-line text editors
     * combobox
     * image buttons
-    * custom widgets
 * detailed theming (e.g. custom drawing of slider cursor)
 * texture atlas creation
 * z-ordering for windows
 * scroll bars don't scroll on mouse drag
+* editbox cursor doesn't start where mouse was clicked
+* text overflow on editboxes isn't handled well
 * better OpenGL flag management
 * documentation
 * samples
@@ -118,4 +121,4 @@ Fonts in the `examples/assets` directory are licensed under the [SIL OFL][sil_of
 [sil_ofl]: http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL
 [license-link]: https://raw.githubusercontent.com/tbogdala/eweygewey/master/LICENSE
 [basic_ss]: https://github.com/tbogdala/eweygewey/blob/master/examples/screenshots/basic_ss_0.jpg
-[basic_example]: https://raw.githubusercontent.com/tbogdala/cubez/master/examples/basic
+[basic_example]: https://github.com/tbogdala/eweygewey/blob/master/examples/basicGLFW/main.go
