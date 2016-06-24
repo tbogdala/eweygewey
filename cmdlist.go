@@ -16,6 +16,9 @@ type cmdList struct {
 	faceCount   uint32           // face count
 	clipRect    mgl.Vec4         // clip rect [x1,y1,x2,y2] top-left to bottom-right
 	textureID   graphics.Texture // texture to bind
+
+	isCustom     bool   // is this a custom render command?
+	onCustomDraw func() // called during Manager.Draw()
 }
 
 // NewCmdList creates a new command list for rendering.

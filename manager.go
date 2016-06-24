@@ -316,9 +316,9 @@ func (ui *Manager) Construct(frameDelta float64) {
 	}
 }
 
-// Draw buffers the UI vertex data into the rendering pipeline and does
-// the actual draw call.
-func (ui *Manager) Draw() {
+// bindOpenGLData sets the program, VAO, uniforms and attributes required for the
+// controls to be drawn from the command buffers
+func (ui *Manager) bindOpenGLData(style *Style, view mgl.Mat4) {
 	const floatSize = 4
 	const uintSize = 4
 	const posOffset = 0
@@ -326,39 +326,11 @@ func (ui *Manager) Draw() {
 	const texIdxOffset = floatSize * 4
 	const colorOffset = floatSize * 5
 	const VBOStride = floatSize * (2 + 2 + 1 + 4) // vert / uv / texIndex / color
+
 	gfx := ui.gfx
-
-	// FIXME: move the zdepth definitions elsewhere
-	const minZDepth = -100.0
-	const maxZDepth = 100.0
-
-	style := DefaultStyle
-
-	// for now, loop through all of the windows and copy all of the data into the manager's buffer
-	// FIXME: this could be buffered straight from the cmdList
-	startIndex := uint32(0)
-	for _, w := range ui.windows {
-		for _, cmd := range w.cmds {
-			ui.comboBuffer = append(ui.comboBuffer, cmd.comboBuffer...)
-
-			// reindex the index buffer to reference the correct vertex data
-			for _, i := range cmd.indexBuffer {
-				ui.indexBuffer = append(ui.indexBuffer, i+startIndex)
-			}
-			ui.faceCount += cmd.faceCount
-			startIndex += cmd.faceCount * 2
-		}
-	}
 
 	gfx.UseProgram(ui.shader)
 	gfx.BindVertexArray(ui.vao)
-	view := mgl.Ortho(0, float32(ui.width), 0, float32(ui.height), minZDepth, maxZDepth)
-
-	// buffer the data
-	gfx.BindBuffer(graphics.ARRAY_BUFFER, ui.comboVBO)
-	gfx.BufferData(graphics.ARRAY_BUFFER, floatSize*len(ui.comboBuffer), gfx.Ptr(&ui.comboBuffer[0]), graphics.STREAM_DRAW)
-	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
-	gfx.BufferData(graphics.ELEMENT_ARRAY_BUFFER, uintSize*len(ui.indexBuffer), gfx.Ptr(&ui.indexBuffer[0]), graphics.STREAM_DRAW)
 
 	// bind the attributes
 	shaderViewMatrix := gfx.GetUniformLocation(ui.shader, "VIEW")
@@ -401,14 +373,74 @@ func (ui *Manager) Draw() {
 	gfx.VertexAttribPointer(uint32(texIdxPosition), 1, graphics.FLOAT, false, VBOStride, gfx.PtrOffset(texIdxOffset))
 
 	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
+}
+
+// Draw buffers the UI vertex data into the rendering pipeline and does
+// the actual draw call.
+func (ui *Manager) Draw() {
+	const floatSize = 4
+	const uintSize = 4
+	const posOffset = 0
+	const uvOffset = floatSize * 2
+	const texIdxOffset = floatSize * 4
+	const colorOffset = floatSize * 5
+	const VBOStride = floatSize * (2 + 2 + 1 + 4) // vert / uv / texIndex / color
+	gfx := ui.gfx
+
+	// FIXME: move the zdepth definitions elsewhere
+	const minZDepth = -100.0
+	const maxZDepth = 100.0
+
+	// for now, loop through all of the windows and copy all of the data into the manager's buffer
+	// FIXME: this could be buffered straight from the cmdList
+	startIndex := uint32(0)
+	for _, w := range ui.windows {
+		for _, cmd := range w.cmds {
+			ui.comboBuffer = append(ui.comboBuffer, cmd.comboBuffer...)
+
+			// reindex the index buffer to reference the correct vertex data
+			for _, i := range cmd.indexBuffer {
+				ui.indexBuffer = append(ui.indexBuffer, i+startIndex)
+			}
+			ui.faceCount += cmd.faceCount
+			startIndex += cmd.faceCount * 2
+		}
+	}
+
+	gfx.BindVertexArray(ui.vao)
+	view := mgl.Ortho(0, float32(ui.width), 0, float32(ui.height), minZDepth, maxZDepth)
+
+	// buffer the data
+	gfx.BindBuffer(graphics.ARRAY_BUFFER, ui.comboVBO)
+	gfx.BufferData(graphics.ARRAY_BUFFER, floatSize*len(ui.comboBuffer), gfx.Ptr(&ui.comboBuffer[0]), graphics.STREAM_DRAW)
+	gfx.BindBuffer(graphics.ELEMENT_ARRAY_BUFFER, ui.indexVBO)
+	gfx.BufferData(graphics.ELEMENT_ARRAY_BUFFER, uintSize*len(ui.indexBuffer), gfx.Ptr(&ui.indexBuffer[0]), graphics.STREAM_DRAW)
+
+	// this should be set to true when the uniforms and attributes, etc... need to be rebound
+	needRebinding := true
 
 	// loop through the windows and each window's draw cmd list
 	indexOffset := uint32(0)
 	for _, w := range ui.windows {
 		for _, cmd := range w.cmds {
 			gfx.Scissor(int32(cmd.clipRect[0]), int32(cmd.clipRect[1]-cmd.clipRect[3]), int32(cmd.clipRect[2]), int32(cmd.clipRect[3]))
-			gfx.DrawElements(graphics.TRIANGLES, int32(cmd.faceCount*3), graphics.UNSIGNED_INT, gfx.PtrOffset(int(indexOffset)*uintSize))
-			indexOffset += cmd.faceCount * 3
+
+			// for most widgets, isCustom will be false, so we just draw things how we have them bound and then
+			// update the index offset into the master combo and index buffers stored in Manager.
+			if cmd.isCustom == false {
+				if needRebinding {
+					// bind all of the uniforms and attributes
+					ui.bindOpenGLData(&DefaultStyle, view)
+					gfx.Viewport(0, 0, ui.width, ui.height)
+					needRebinding = false
+				}
+				gfx.DrawElements(graphics.TRIANGLES, int32(cmd.faceCount*3), graphics.UNSIGNED_INT, gfx.PtrOffset(int(indexOffset)*uintSize))
+				indexOffset += cmd.faceCount * 3
+			} else {
+				gfx.Viewport(int32(cmd.clipRect[0]), int32(cmd.clipRect[1]-cmd.clipRect[3]), int32(cmd.clipRect[2]), int32(cmd.clipRect[3]))
+				cmd.onCustomDraw()
+				needRebinding = true
+			}
 		}
 	}
 

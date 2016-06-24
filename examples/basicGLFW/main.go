@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	fizzle "github.com/tbogdala/fizzle"
 	graphics "github.com/tbogdala/fizzle/graphicsprovider"
 	gl "github.com/tbogdala/fizzle/graphicsprovider/opengl"
+	forward "github.com/tbogdala/fizzle/renderer/forward"
 )
 
 const (
@@ -117,7 +119,7 @@ func main() {
 	var mouseTestWindow, imageTestWindow, mainWindow *gui.Window
 
 	// create a small overlay window in the corner
-	mouseTestWindow = uiman.NewWindow("MouseTest", 0.05, 0.95, 0.2, 0.35, func(wnd *gui.Window) {
+	mouseTestWindow = uiman.NewWindow("MouseTest", 0.01, 0.99, 0.2, 0.35, func(wnd *gui.Window) {
 		// display the mouse coordinate
 		mouseX, mouseY := uiman.GetMousePosition()
 		wnd.Text(fmt.Sprintf("Mouse position = %.2f,%.2f", mouseX, mouseY))
@@ -145,7 +147,7 @@ func main() {
 	mouseTestWindow.AutoAdjustHeight = true
 
 	// create a window that looks a bit like a property editor
-	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.05, 0.65, 0.2, 0.25, func(wnd *gui.Window) {
+	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.01, 0.85, 0.2, 0.25, func(wnd *gui.Window) {
 		// throw a few test buttons into the mix
 		wnd.Button("TestBtn0", "Button0")
 		wnd.Button("TestBtn1", "Button1")
@@ -180,7 +182,7 @@ func main() {
 
 	// create a simple window to house an editbox and a button
 	editString := "/c/gocode/src"
-	editboxWindow := uiman.NewWindow("EditboxWnd", 0.3, 0.9, 0.6, 0.0, func(wnd *gui.Window) {
+	editboxWindow := uiman.NewWindow("EditboxWnd", 0.3, 0.99, 0.6, 0.0, func(wnd *gui.Window) {
 		wnd.Button("EditboxButton", "Press Me")
 		wnd.Editbox("Editbox1", &editString)
 		//wnd.Text("<------ EDITBOX HERE ------>")
@@ -190,7 +192,7 @@ func main() {
 	editboxWindow.AutoAdjustHeight = true
 
 	// create a log window
-	mainWindow = uiman.NewWindow("MainWnd", 0.3, 0.7, 0.5, 0.5, func(wnd *gui.Window) {
+	mainWindow = uiman.NewWindow("MainWnd", 0.5, 0.7, 0.4, 0.4, func(wnd *gui.Window) {
 		wnd.Text(fmt.Sprintf("Current FPS = %d ; frame delta = %0.06g ms", lastCalcFPS, frameDelta/1000.0))
 	})
 	mainWindow.Title = "Widget Test"
@@ -212,11 +214,69 @@ func main() {
 	imageTestWindow.Style.WindowBgColor[3] = 0.0               // transparent
 	imageTestWindow.Style.WindowPadding = mgl.Vec4{0, 0, 0, 0} // no padding
 
+	// make a test window that will just have a custom 3d rendering view
+	const windowSize = 256
+	customMargin := mgl.Vec4{0, 0, 0, 0}
+	customWS, customHS := uiman.DisplayToScreen(windowSize, windowSize)
+
+	renderer := forward.NewForwardRenderer(gfx)
+	// load data for custom rendering
+	renderer.ChangeResolution(windowSize, windowSize)
+	defer renderer.Destroy()
+
+	// put a light in there
+	light := renderer.NewLight()
+	light.DiffuseColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
+	light.Direction = mgl.Vec3{1.0, -0.5, -1.0}
+	light.DiffuseIntensity = 0.70
+	light.SpecularIntensity = 0.10
+	light.AmbientIntensity = 0.20
+	light.Attenuation = 1.0
+	renderer.ActiveLights[0] = light
+
+	// load the diffuse shader
+	diffuseShader, err := fizzle.LoadShaderProgramFromFiles("../assets/diffuse", nil)
+	if err != nil {
+		panic("Failed to compile and link the diffuse shader program!\n" + err.Error())
+	}
+	defer diffuseShader.Destroy()
+
+	// create a 2x2x2 cube to render
+	const cubeRadsPerSec = math.Pi / 4.0
+	cube := fizzle.CreateCube("diffuse", -1, -1, -1, 1, 1, 1)
+	cube.Core.Shader = diffuseShader
+	cube.Core.DiffuseColor = mgl.Vec4{0.9, 0.05, 0.05, 1.0}
+	cube.Core.SpecularColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
+	cube.Core.Shininess = 4.8
+
+	// setup the camera to look at the cube
+	camera := fizzle.NewOrbitCamera(mgl.Vec3{0, 0, 0}, math.Pi/2.0, 5.0, math.Pi/2.0)
+
+	// now create the window itself
+	customWindow := uiman.NewWindow("CustomTest", 0.01, 0.5, customWS, customHS, func(wnd *gui.Window) {
+		wnd.Custom(customWS, customHS, customMargin, func() {
+			// rotate the cube and sphere around the Y axis at a speed of radsPerSec
+			rotDelta := mgl.QuatRotate(cubeRadsPerSec*float32(wnd.Owner.FrameDelta), mgl.Vec3{0.0, 1.0, 0.0})
+			cube.LocalRotation = cube.LocalRotation.Mul(rotDelta)
+
+			gfx.ClearColor(0.0, 0.0, 0.0, 1.0)
+			gfx.Clear(graphics.COLOR_BUFFER_BIT | graphics.DEPTH_BUFFER_BIT)
+
+			perspective := mgl.Perspective(mgl.DegToRad(60.0), float32(windowSize)/float32(windowSize), 1.0, 100.0)
+			view := camera.GetViewMatrix()
+			renderer.DrawRenderable(cube, nil, perspective, view, camera)
+		})
+	})
+	customWindow.Title = "Custom Widget"
+	customWindow.ShowTitleBar = true
+	customWindow.Style.WindowPadding = mgl.Vec4{0, 0, 0, 0}
+
 	// set some additional OpenGL flags
 	gfx.BlendEquation(graphics.FUNC_ADD)
 	gfx.BlendFunc(graphics.SRC_ALPHA, graphics.ONE_MINUS_SRC_ALPHA)
 	gfx.Enable(graphics.BLEND)
 	gfx.Enable(graphics.TEXTURE_2D)
+	gfx.Enable(graphics.CULL_FACE)
 
 	// enter the renderloop
 	thisFrame = time.Now()

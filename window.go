@@ -222,20 +222,50 @@ func (wnd *Window) makeCmdList() *cmdList {
 	return cmdList
 }
 
+// getFirstCmd will return the first non-custom cmdList; if the first cmdList
+// is custom, it makes a new one.
 func (wnd *Window) getFirstCmd() *cmdList {
+	// empty list
 	if len(wnd.cmds) == 0 {
-		// safety first!
 		wnd.cmds = []*cmdList{wnd.makeCmdList()}
 	}
+
+	// if the first cmd is custom, then insert a new one
+	if wnd.cmds[0].isCustom {
+		newCmd := wnd.makeCmdList()
+		newSlice := []*cmdList{}
+		newSlice = append(newSlice, newCmd)
+		newSlice = append(newSlice, wnd.cmds...)
+		wnd.cmds = newSlice
+	}
+
 	return wnd.cmds[0]
 }
 
+// getLastCmd will return the last non-custom cmdList
 func (wnd *Window) getLastCmd() *cmdList {
+	// empty list
 	if len(wnd.cmds) == 0 {
-		// safety first!
 		wnd.cmds = []*cmdList{wnd.makeCmdList()}
 	}
+
+	// we don't want to add to the custom draw command
+	if wnd.cmds[len(wnd.cmds)-1].isCustom {
+		return wnd.addNewCmd()
+	}
+
+	// just return the last cmdList
 	return wnd.cmds[len(wnd.cmds)-1]
+}
+
+// addNewCmd creates a new cmdList and adds it to the window's slice of cmlLists.
+func (wnd *Window) addNewCmd() *cmdList {
+	if len(wnd.cmds) == 0 {
+		return wnd.getFirstCmd()
+	}
+	newCmd := wnd.makeCmdList()
+	wnd.cmds = append(wnd.cmds, newCmd)
+	return newCmd
 }
 
 // buildFrame builds the background for the window
@@ -730,6 +760,28 @@ func (wnd *Window) Separator() {
 	// start a new row
 	wnd.setNextRowCursorOffset(wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3])
 	wnd.StartRow()
+}
+
+// Custom inserts a new cmdList and sets it up for custom rendering.
+func (wnd *Window) Custom(widthS, heightS float32, margin mgl.Vec4, customDraw func()) {
+	// get the location and size of this widget
+	pos := wnd.getCursorDC()
+	pos[0] += margin[0]
+	pos[1] -= margin[2]
+	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
+
+	// create a new command for this one
+	cmd := wnd.addNewCmd()
+	cmd.isCustom = true
+	cmd.onCustomDraw = customDraw
+	cmd.clipRect[0] = pos[0] + 1.0
+	cmd.clipRect[1] = pos[1]
+	cmd.clipRect[2] = widthDC - 1.0
+	cmd.clipRect[3] = heightDC
+
+	// advance the cursor
+	wnd.addCursorHorizontalDelta(widthDC + margin[0] + margin[1])
+	wnd.setNextRowCursorOffset(heightDC + margin[2] + margin[3])
 }
 
 // Editbox creates an editbox control that changes the value string.
