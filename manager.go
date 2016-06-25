@@ -408,7 +408,7 @@ func (ui *Manager) Draw() {
 	}
 
 	gfx.BindVertexArray(ui.vao)
-	view := mgl.Ortho(0, float32(ui.width), 0, float32(ui.height), minZDepth, maxZDepth)
+	view := mgl.Ortho(0.5, float32(ui.width)+0.5, 0.5, float32(ui.height)+0.5, minZDepth, maxZDepth)
 
 	// buffer the data
 	gfx.BindBuffer(graphics.ARRAY_BUFFER, ui.comboVBO)
