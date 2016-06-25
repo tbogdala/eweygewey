@@ -840,7 +840,7 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 				// handle the key events specially in their own way
 				switch event.KeyCode {
 				case EweyKeyRight:
-					if editorState.CursorOffset < len(*value)-1 {
+					if editorState.CursorOffset < len(*value) {
 						editorState.CursorOffset++
 					}
 				case EweyKeyLeft:
