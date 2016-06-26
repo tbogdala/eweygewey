@@ -591,6 +591,23 @@ func (wnd *Window) DragSliderInt(id string, speed float32, value *int) error {
 	return wnd.sliderBehavior(valueString, 0.0, false)
 }
 
+// DragSliderUInt creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderUInt(id string, speed float32, value *uint) error {
+	var valueString string
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += uint(mouseDeltaX * speed)
+	}
+
+	valueString = fmt.Sprintf(wnd.Style.SliderIntFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
+}
+
 // DragSliderFloat creates a slider widget that alters a value based on mouse
 // movement only.
 func (wnd *Window) DragSliderFloat(id string, speed float32, value *float32) error {
@@ -602,6 +619,23 @@ func (wnd *Window) DragSliderFloat(id string, speed float32, value *float32) err
 	if sliderPressed {
 		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
 		*value += mouseDeltaX * speed
+	}
+
+	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
+}
+
+// DragSliderFloat64 creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderFloat64(id string, speed float64, value *float64) error {
+	var valueString string
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += float64(mouseDeltaX) * speed
 	}
 
 	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)

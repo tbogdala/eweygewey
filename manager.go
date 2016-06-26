@@ -332,7 +332,7 @@ func (ui *Manager) bindOpenGLData(style *Style, view mgl.Mat4) {
 	gfx.UseProgram(ui.shader)
 	gfx.BindVertexArray(ui.vao)
 
-	// bind the attributes
+	// bind the uniforms and attributes
 	shaderViewMatrix := gfx.GetUniformLocation(ui.shader, "VIEW")
 	gfx.UniformMatrix4fv(shaderViewMatrix, 1, false, view)
 
