@@ -601,7 +601,9 @@ func (wnd *Window) DragSliderUInt(id string, speed float32, value *uint) error {
 	// moved and slide the control cursor and edit the value accordingly.
 	if sliderPressed {
 		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
-		*value += uint(mouseDeltaX * speed)
+		if int(mouseDeltaX*speed)+int(*value) >= 0 {
+			*value += uint(mouseDeltaX * speed)
+		}
 	}
 
 	valueString = fmt.Sprintf(wnd.Style.SliderIntFormat, *value)
