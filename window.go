@@ -147,9 +147,11 @@ func (wnd *Window) construct() {
 	}
 
 	// do we need to roll back the scroll bar change? has it overextended the
-	// bounds and need to be pulled back in?
-	if wnd.IsScrollable && wnd.ScrollOffset > (totalControlHeightDC-displayHeight) {
-		wnd.ScrollOffset = totalControlHeightDC - displayHeight
+	// bounds and need to be pulled back in? make sure that the total control
+	// height is actually greter than display height and requires scrolling first.
+	controlHeightOverflow := totalControlHeightDC - displayHeight
+	if wnd.IsScrollable && controlHeightOverflow > 0 && wnd.ScrollOffset > controlHeightOverflow {
+		wnd.ScrollOffset = controlHeightOverflow
 	}
 
 	// build the frame background for the window including title bar and scroll bar.
