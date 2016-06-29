@@ -152,6 +152,9 @@ func (wnd *Window) construct() {
 	controlHeightOverflow := totalControlHeightDC - displayHeight
 	if wnd.IsScrollable && controlHeightOverflow > 0 && wnd.ScrollOffset > controlHeightOverflow {
 		wnd.ScrollOffset = controlHeightOverflow
+	} else if controlHeightOverflow < 0 {
+		// more space then needed so reset the scroll bar
+		wnd.ScrollOffset = 0
 	}
 
 	// build the frame background for the window including title bar and scroll bar.
