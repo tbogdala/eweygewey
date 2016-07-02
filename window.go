@@ -80,6 +80,10 @@ type Window struct {
 	// next control to be at least a specific size.
 	requestedItemWidthMinDC float32
 
+	// requestedItemWidthMaxDC is set by the client code to adjust the width of the
+	// next control to be at most a specific size.
+	requestedItemWidthMaxDC float32
+
 	// cmds is the slice of cmdLists used to to render the window
 	cmds []*cmdList
 }
@@ -398,9 +402,35 @@ func (wnd *Window) RequestItemWidthMin(nextMinWS float32) {
 
 	// calc the amount of window width we're requesting
 	_, _, wndW, _ := wnd.GetDisplaySize()
+	unpaddedWndW := wndW - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1]
 
 	// convert this to display space
-	wnd.requestedItemWidthMinDC = reqMin * wndW
+	wnd.requestedItemWidthMinDC = reqMin * unpaddedWndW
+
+	// clip the request to window size left
+	if wnd.widgetCursorDC[0]+wnd.requestedItemWidthMinDC > unpaddedWndW {
+		wnd.requestedItemWidthMinDC = unpaddedWndW - wnd.widgetCursorDC[0]
+	}
+}
+
+// RequestItemWidthMax will request the window to draw the next widget with at most the
+// specified window-normalized size (e.g. if Window's width is 500 px, then passing
+// 0.25 here translates to 125 px).
+func (wnd *Window) RequestItemWidthMax(nextMaxWS float32) {
+	// clip the incoming value
+	reqMax := ClipF32(0.0, 1.0, nextMaxWS)
+
+	// calc the amount of window width we're requesting
+	_, _, wndW, _ := wnd.GetDisplaySize()
+	unpaddedWndW := wndW - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1]
+
+	// convert this to display space
+	wnd.requestedItemWidthMaxDC = reqMax * unpaddedWndW
+
+	// clip the request to window size left
+	if wnd.widgetCursorDC[0]+wnd.requestedItemWidthMaxDC > unpaddedWndW {
+		wnd.requestedItemWidthMaxDC = unpaddedWndW - wnd.widgetCursorDC[0]
+	}
 }
 
 // addCursorHorizontalDelta sets the amount the cursor will to change
@@ -414,6 +444,14 @@ func (wnd *Window) addCursorHorizontalDelta(hWidth float32) {
 
 		// reset the request to make it a one-off operation
 		wnd.requestedItemWidthMinDC = 0.0
+	}
+	if wnd.requestedItemWidthMaxDC > 0.0 {
+		if wnd.requestedItemWidthMaxDC < hWidth {
+			hWidth = wnd.requestedItemWidthMaxDC
+		}
+
+		// reset the request to make it a one-off operation
+		wnd.requestedItemWidthMaxDC = 0.0
 	}
 
 	wnd.widgetCursorDC[0] += hWidth
@@ -429,7 +467,22 @@ func (wnd *Window) setNextRowCursorOffset(offset float32) {
 	}
 }
 
-/*
+// clampWidgetWidthToReqW clamps the incoming width of a widget to the requested
+// min and max values if they are set.
+func (wnd *Window) clampWidgetWidthToReqW(widthDC float32) float32 {
+	result := widthDC
+
+	if wnd.requestedItemWidthMinDC > 0.0 && wnd.requestedItemWidthMinDC > widthDC {
+		result = wnd.requestedItemWidthMinDC
+	}
+	if wnd.requestedItemWidthMaxDC > 0.0 && wnd.requestedItemWidthMaxDC < widthDC {
+		result = wnd.requestedItemWidthMaxDC
+	}
+
+	return result
+}
+
+/* *****************************************************************************************************************************************************
 _    _  _____ ______  _____  _____  _____  _____
 | |  | ||_   _||  _  \|  __ \|  ___||_   _|/  ___|
 | |  | |  | |  | | | || |  \/| |__    | |  \ `--.
@@ -437,7 +490,7 @@ _    _  _____ ______  _____  _____  _____  _____
 \  /\  / _| |_ | |/ / | |_\ \| |___   | |  /\__/ /
 \/  \/  \___/ |___/   \____/\____/   \_/  \____/
 
-*/
+***************************************************************************************************************************************************** */
 
 // Text renders a text widget
 func (wnd *Window) Text(msg string) error {
@@ -483,6 +536,9 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1]
 	buttonH := dimY + wnd.Style.ButtonPadding[2] + wnd.Style.ButtonPadding[3]
 
+	// clamp the width of the widget to respect any requests to size
+	buttonW = wnd.clampWidgetWidthToReqW(buttonW)
+
 	// set a default color for the button
 	bgColor := wnd.Style.ButtonColor
 	buttonPressed := false
@@ -509,8 +565,10 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	cmd.AddFaces(combos, indexes, fc)
 
 	// create the text for the button
+	buttonInternalW := buttonW - wnd.Style.ButtonPadding[0] - wnd.Style.ButtonPadding[0]
+	centerTextX := (buttonInternalW / 2.0) - (dimX / 2.0)
 	textPos := pos
-	textPos[0] += wnd.Style.ButtonPadding[0]
+	textPos[0] += centerTextX
 	textPos[1] -= wnd.Style.ButtonPadding[2]
 	renderData := font.CreateText(textPos, wnd.Style.ButtonTextColor, text)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
@@ -675,6 +733,9 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 	// movement, which affects the scale of the value to edit.
 	sliderW = sliderW - wnd.Style.SliderCursorWidth - wnd.Style.SliderPadding[0] - wnd.Style.SliderPadding[1]
 
+	// clamp the widget to the requested width
+	sliderW = wnd.clampWidgetWidthToReqW(sliderW)
+
 	// test to see if the mouse is inside the widget
 	lmbStatus := wnd.Owner.GetMouseButtonAction(0)
 	if lmbStatus != MouseUp {
@@ -716,6 +777,9 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 	dimX, dimY, _ := font.GetRenderSize(valueString)
 	sliderW := wndWidth - wnd.widgetCursorDC[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[1]
 	sliderH := dimY + wnd.Style.SliderPadding[2] + wnd.Style.SliderPadding[3]
+
+	// clamp the widget to the requested width
+	sliderW = wnd.clampWidgetWidthToReqW(sliderW)
 
 	// set a default color for the background
 	bgColor := wnd.Style.SliderBgColor
@@ -770,6 +834,9 @@ func (wnd *Window) Image(id string, widthS, heightS float32, color mgl.Vec4, tex
 	pos[1] += wnd.Style.ImageMargin[2]
 	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
 
+	// clamp the width to the requsted size
+	widthDC = wnd.clampWidgetWidthToReqW(widthDC)
+
 	// render the button background
 	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+widthDC, pos[1]-heightDC, color, textureIndex, uvPair)
 	cmd.AddFaces(combos, indexes, fc)
@@ -811,6 +878,9 @@ func (wnd *Window) Custom(widthS, heightS float32, margin mgl.Vec4, customDraw f
 	pos[1] -= margin[2]
 	widthDC, heightDC := wnd.Owner.ScreenToDisplay(widthS, heightS)
 
+	// clamp the width to the requsted size
+	widthDC = wnd.clampWidgetWidthToReqW(widthDC)
+
 	// create a new command for this one
 	cmd := wnd.addNewCmd()
 	cmd.isCustom = true
@@ -845,6 +915,9 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	_, dimY, _ := font.GetRenderSize(*value)
 	editboxW := wndWidth - wnd.widgetCursorDC[0] - wnd.Style.WindowPadding[1] - wnd.Style.EditboxMargin[1]
 	editboxH := dimY + wnd.Style.EditboxPadding[2] + wnd.Style.EditboxPadding[3]
+
+	// clamp the width to the requsted size
+	editboxW = wnd.clampWidgetWidthToReqW(editboxW)
 
 	// set a default color for the button
 	bgColor := wnd.Style.EditboxBgColor
