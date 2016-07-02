@@ -538,6 +538,7 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// clamp the width of the widget to respect any requests to size
 	buttonW = wnd.clampWidgetWidthToReqW(buttonW)
+	buttonW = buttonW - wnd.Style.ButtonMargin[0] - wnd.Style.ButtonMargin[1]
 
 	// set a default color for the button
 	bgColor := wnd.Style.ButtonColor
@@ -732,6 +733,7 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 	// calculate how much of the slider control is available to the cursor for
 	// movement, which affects the scale of the value to edit.
 	sliderW = sliderW - wnd.Style.SliderCursorWidth - wnd.Style.SliderPadding[0] - wnd.Style.SliderPadding[1]
+	sliderW = sliderW - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
 
 	// clamp the widget to the requested width
 	sliderW = wnd.clampWidgetWidthToReqW(sliderW)
@@ -780,6 +782,7 @@ func (wnd *Window) sliderBehavior(valueString string, valueRatio float32, drawCu
 
 	// clamp the widget to the requested width
 	sliderW = wnd.clampWidgetWidthToReqW(sliderW)
+	sliderW = sliderW - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
 
 	// set a default color for the background
 	bgColor := wnd.Style.SliderBgColor
@@ -918,6 +921,7 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 
 	// clamp the width to the requsted size
 	editboxW = wnd.clampWidgetWidthToReqW(editboxW)
+	editboxW = editboxW - wnd.Style.EditboxMargin[0] - wnd.Style.EditboxMargin[1]
 
 	// set a default color for the button
 	bgColor := wnd.Style.EditboxBgColor
