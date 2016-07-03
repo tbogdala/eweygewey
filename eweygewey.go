@@ -24,6 +24,11 @@ type Style struct {
 	ButtonTextColor      mgl.Vec4 // button text color
 	ButtonMargin         mgl.Vec4 // [left,right,top,bottom] margin values for buttons
 	ButtonPadding        mgl.Vec4 // [left,right,top,bottom] padding values for buttons
+	CheckboxColor        mgl.Vec4 // checkbox background color
+	CheckboxCheckColor   mgl.Vec4 // checkbox cursor color when clicked
+	CheckboxCursorWidth  float32  // checkbox inner check cursor size
+	CheckboxMargin       mgl.Vec4 // [left,right,top,bottom] margin values for checkbox
+	CheckboxPadding      mgl.Vec4 // [left,right,top,bottom] padding values for checkbox
 	EditboxBgColor       mgl.Vec4 // Editbox background color
 	EditboxActiveColor   mgl.Vec4 // Editbox background color when clicked
 	EditboxCursorColor   mgl.Vec4 // color for the editbox cursor
@@ -99,6 +104,11 @@ var (
 		ButtonTextColor:      ColorIToV(230, 230, 230, 255),
 		ButtonMargin:         mgl.Vec4{2, 2, 4, 4},
 		ButtonPadding:        mgl.Vec4{4, 4, 2, 2},
+		CheckboxColor:        ColorIToV(128, 128, 128, 179),
+		CheckboxCheckColor:   ColorIToV(204, 128, 120, 255),
+		CheckboxCursorWidth:  16.0,
+		CheckboxMargin:       mgl.Vec4{2, 2, 4, 4},
+		CheckboxPadding:      mgl.Vec4{4, 4, 2, 2},
 		EditboxBgColor:       ColorIToV(128, 128, 128, 179),
 		EditboxActiveColor:   ColorIToV(204, 128, 120, 255),
 		EditboxCursorColor:   ColorIToV(230, 230, 230, 255),

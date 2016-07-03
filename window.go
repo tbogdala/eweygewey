@@ -187,6 +187,11 @@ func (wnd *Window) GetDisplaySize() (float32, float32, float32, float32) {
 	return winxDC, winyDC, winwDC, winhDC
 }
 
+// GetAspectRatio returns the aspect ratio of the window (width / height)
+func (wnd *Window) GetAspectRatio() float32 {
+	return wnd.Width / wnd.Height
+}
+
 // GetFrameSize returns the (x,y) top-left corner of the window in display-space
 // coordinates and the width and height of the total window frame as well, including
 // the space window decorations take up like titlebar and scrollbar.
@@ -516,6 +521,69 @@ func (wnd *Window) Text(msg string) error {
 	return nil
 }
 
+// Checkbox draws the checkbox widget on screen.
+func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
+	cmd := wnd.getLastCmd()
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.CheckboxMargin[0]
+	pos[1] -= wnd.Style.CheckboxMargin[2]
+
+	// calculate the size necessary for the widget
+	checkW := wnd.Style.CheckboxPadding[0] + wnd.Style.CheckboxPadding[1] + wnd.Style.CheckboxCursorWidth
+	checkH := wnd.Style.CheckboxPadding[2] + wnd.Style.CheckboxPadding[3] + (wnd.Style.CheckboxCursorWidth * (wnd.Height / wnd.Width))
+
+	// clamp the width of the widget to respect any requests to size
+	checkW = wnd.clampWidgetWidthToReqW(checkW)
+
+	// set a default color for the button
+	bgColor := wnd.Style.CheckboxColor
+	buttonPressed := false
+
+	// test to see if the mouse is inside the widget
+	mx, my := wnd.Owner.GetMousePosition()
+	if mx > pos[0] && my > pos[1]-checkH && mx < pos[0]+checkW && my < pos[1] {
+		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+
+		if lmbStatus == MouseClick {
+			buttonPressed = true
+			*value = !(*value)
+		} else {
+			// mouse is down, but was it pressed inside the button?
+			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
+			if mdx > pos[0] && mdy > pos[1]-checkH && mdx < pos[0]+checkW && mdy < pos[1] {
+				wnd.Owner.SetActiveInputID(id)
+			}
+		}
+	}
+
+	// render the widget background
+	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+checkW, pos[1]-checkH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
+
+	// do we show the check in the checkbox
+	if *value {
+		// render the slider cursor
+		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+wnd.Style.SliderPadding[0], pos[1]-wnd.Style.SliderPadding[2],
+			pos[0]+checkW-wnd.Style.SliderPadding[1], pos[1]-checkH+wnd.Style.SliderPadding[3],
+			wnd.Style.CheckboxCheckColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		cmd.AddFaces(combos, indexes, fc)
+	}
+
+	// advance the cursor for the width of the text widget
+	wnd.addCursorHorizontalDelta(checkW + wnd.Style.CheckboxMargin[0] + wnd.Style.CheckboxMargin[1])
+	wnd.setNextRowCursorOffset(checkH + wnd.Style.CheckboxMargin[2] + wnd.Style.CheckboxMargin[3])
+
+	// if we've captured the mouse click event and registered a button press, clear
+	// the tracking data for the mouse button so that we don't get duplicate matches.
+	if buttonPressed {
+		wnd.Owner.ClearMouseButtonAction(0)
+	}
+
+	return buttonPressed, nil
+}
+
 // Button draws the button widget on screen with the given text.
 func (wnd *Window) Button(id string, text string) (bool, error) {
 	cmd := wnd.getLastCmd()
@@ -548,14 +616,16 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	mx, my := wnd.Owner.GetMousePosition()
 	if mx > pos[0] && my > pos[1]-buttonH && mx < pos[0]+buttonW && my < pos[1] {
 		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
-		if lmbStatus == MouseUp {
+
+		if lmbStatus == MouseClick {
+			buttonPressed = true
+		} else if lmbStatus == MouseUp {
 			bgColor = wnd.Style.ButtonHoverColor
 		} else {
 			// mouse is down, but was it pressed inside the button?
 			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
 			if mdx > pos[0] && mdy > pos[1]-buttonH && mdx < pos[0]+buttonW && mdy < pos[1] {
 				bgColor = wnd.Style.ButtonActiveColor
-				buttonPressed = true
 				wnd.Owner.SetActiveInputID(id)
 			}
 		}
@@ -577,6 +647,12 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	// advance the cursor for the width of the text widget
 	wnd.addCursorHorizontalDelta(buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1])
 	wnd.setNextRowCursorOffset(buttonH + wnd.Style.ButtonMargin[2] + wnd.Style.ButtonMargin[3])
+
+	// if we've captured the mouse click event and registered a button press, clear
+	// the tracking data for the mouse button so that we don't get duplicate matches.
+	if buttonPressed {
+		wnd.Owner.ClearMouseButtonAction(0)
+	}
 
 	return buttonPressed, nil
 }
@@ -691,6 +767,26 @@ func (wnd *Window) DragSliderFloat(id string, speed float32, value *float32) err
 	return wnd.sliderBehavior(valueString, 0.0, false)
 }
 
+// DragSliderUFloat creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderUFloat(id string, speed float32, value *float32) error {
+	var valueString string
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += mouseDeltaX * speed
+		if *value < 0.0 {
+			*value = 0.0
+		}
+	}
+
+	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
+}
+
 // DragSliderFloat64 creates a slider widget that alters a value based on mouse
 // movement only.
 func (wnd *Window) DragSliderFloat64(id string, speed float64, value *float64) error {
@@ -702,6 +798,26 @@ func (wnd *Window) DragSliderFloat64(id string, speed float64, value *float64) e
 	if sliderPressed {
 		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
 		*value += float64(mouseDeltaX) * speed
+	}
+
+	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
+	return wnd.sliderBehavior(valueString, 0.0, false)
+}
+
+// DragSliderUFloat64 creates a slider widget that alters a value based on mouse
+// movement only.
+func (wnd *Window) DragSliderUFloat64(id string, speed float64, value *float64) error {
+	var valueString string
+	sliderPressed, _, _ := wnd.sliderHitTest(id)
+
+	// we have a mouse down in the widget, so check to see how much the mouse has
+	// moved and slide the control cursor and edit the value accordingly.
+	if sliderPressed {
+		mouseDeltaX, _ := wnd.Owner.GetMousePositionDelta()
+		*value += float64(mouseDeltaX) * speed
+		if *value < 0.0 {
+			*value = 0.0
+		}
 	}
 
 	valueString = fmt.Sprintf(wnd.Style.SliderFloatFormat, *value)
@@ -871,6 +987,13 @@ func (wnd *Window) Separator() {
 	// start a new row
 	wnd.setNextRowCursorOffset(wnd.Style.SeparatorHeight + wnd.Style.SeparatorMargin[2] + wnd.Style.SeparatorMargin[3])
 	wnd.StartRow()
+}
+
+// Space adds some horizontal space based on the relative width of the window.
+// For example: a window width of 800, passing 0.1 adds a space of 80
+func (wnd *Window) Space(spaceS float32) {
+	_, _, widthDC, _ := wnd.GetDisplaySize()
+	wnd.addCursorHorizontalDelta(widthDC * spaceS)
 }
 
 // Custom inserts a new cmdList and sets it up for custom rendering.

@@ -48,6 +48,10 @@ type Manager struct {
 	// of a mouse button: MouseUp | MouseDown | MouseRepeat.
 	GetMouseButtonAction func(buttonNumber int) int
 
+	// ClearMouseButtonAction should be a function that clears any tracked
+	// action data for a mouse button
+	ClearMouseButtonAction func(buttonNumber int)
+
 	// GetScrollWheelDelta should be a function that returns the amount of
 	// change to the scroll wheel position that has happened since last check.
 	GetScrollWheelDelta func(bool) float32

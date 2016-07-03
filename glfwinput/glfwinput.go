@@ -114,8 +114,6 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 			} else {
 				mbData.lastPress = time.Unix(0, 0)
 			}
-			mbData.lastAction = action
-			mouseButtonTracker[button] = mbData
 		} else {
 			if action == gui.MouseDown {
 				// check to see if there was a transition from UP to DOWN
@@ -152,8 +150,20 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 
 		// put the updated data back into the map and return the action
 		mbData.lastAction = action
+		mbData.lastCheckedAt = uiman.FrameStart
 		mouseButtonTracker[button] = mbData
 		return action
+	}
+
+	uiman.ClearMouseButtonAction = func(buttonNumber int) {
+		// get the mouse button data and return the stale result if we're
+		// in the same frame.
+		mbData, tracked := mouseButtonTracker[buttonNumber]
+		if tracked == true {
+			mbData.lastAction = gui.MouseUp
+			mbData.doubleClickDetected = false
+			mouseButtonTracker[buttonNumber] = mbData
+		}
 	}
 
 	uiman.GetMouseDownPosition = func(button int) (float32, float32) {
