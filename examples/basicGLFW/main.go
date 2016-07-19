@@ -69,9 +69,9 @@ func renderFrame(frameDelta float64) {
 	gfx.Clear(graphics.COLOR_BUFFER_BIT | graphics.DEPTH_BUFFER_BIT)
 
 	// draw the user interface
+	uiman.Construct(frameDelta)
 	gfx.Disable(graphics.DEPTH_TEST)
 	gfx.Enable(graphics.SCISSOR_TEST)
-	uiman.Construct(frameDelta)
 	uiman.Draw()
 	gfx.Disable(graphics.SCISSOR_TEST)
 	gfx.Enable(graphics.DEPTH_TEST)
@@ -189,6 +189,31 @@ func main() {
 		wnd.RequestItemWidthMax(0.165)
 		wnd.SliderInt("Color4", &color[3], 0, 255)
 
+		wnd.Separator()
+		var nodeOpen bool
+		if nodeOpen, _ = wnd.TreeNode("TN_Hello1", "Tree Node #1"); nodeOpen {
+			wnd.Indent()
+			wnd.StartRow()
+			if nodeOpen, _ = wnd.TreeNode("TN_Hello2", "Tree Node #2"); nodeOpen {
+				wnd.Indent()
+				wnd.StartRow()
+				if nodeOpen, _ = wnd.TreeNode("TN_Hello3", "Tree Node #3"); nodeOpen {
+					wnd.Indent()
+					wnd.StartRow()
+					wnd.Text("Leaf #1")
+					wnd.Unindent()
+				}
+				wnd.Unindent()
+			}
+			wnd.Unindent()
+		}
+		wnd.StartRow()
+		if nodeOpen, _ = wnd.TreeNode("TN_Hello4", "Tree Node #4"); nodeOpen {
+			wnd.Indent()
+			wnd.StartRow()
+			wnd.Text("Leaf #2")
+			wnd.Unindent()
+		}
 	})
 	propertyTestWindow.Title = "Property Test"
 	propertyTestWindow.ShowTitleBar = true

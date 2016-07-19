@@ -11,11 +11,12 @@ import (
 // cmdList will hold all of the information required for one draw call in the
 // user interface.
 type cmdList struct {
-	comboBuffer []float32        // vbo combo floats
-	indexBuffer []uint32         // vbo elements
-	faceCount   uint32           // face count
-	clipRect    mgl.Vec4         // clip rect [x1,y1,x2,y2] top-left to bottom-right
-	textureID   graphics.Texture // texture to bind
+	comboBuffer  []float32        // vbo combo floats
+	indexBuffer  []uint32         // vbo elements
+	faceCount    uint32           // face count
+	indexTracker uint32           // the offset for the next set of indexes when adding new faces
+	clipRect     mgl.Vec4         // clip rect [x1,y1,x2,y2] top-left to bottom-right
+	textureID    graphics.Texture // texture to bind
 
 	isCustom     bool   // is this a custom render command?
 	onCustomDraw func() // called during Manager.Draw()
@@ -37,12 +38,17 @@ func (cmds *cmdList) AddFaces(comboFloats []float32, indexInts []uint32, faceCou
 
 	// manually adjust each index so that they don't collide with
 	// existing element indexes
-	startIndex := cmds.faceCount * 2
+	var highestIndex uint32
+	startIndex := cmds.indexTracker
 	for _, idx := range indexInts {
+		if idx > highestIndex {
+			highestIndex = idx
+		}
 		cmds.indexBuffer = append(cmds.indexBuffer, startIndex+idx)
 	}
 
 	cmds.faceCount += faceCount
+	cmds.indexTracker += highestIndex + 1
 }
 
 // PrefixFaces takes the raw vertex attribute data in a float slice as well as the
@@ -52,14 +58,19 @@ func (cmds *cmdList) PrefixFaces(comboFloats []float32, indexInts []uint32, face
 
 	// manually adjust each index so that they don't collide with
 	// existing element indexes
-	temp := []uint32{}
-	startIndex := cmds.faceCount * 2
+	var temp []uint32
+	var highestIndex uint32
+	startIndex := cmds.indexTracker
 	for _, idx := range indexInts {
+		if idx > highestIndex {
+			highestIndex = idx
+		}
 		temp = append(temp, startIndex+idx)
 	}
 	cmds.indexBuffer = append(temp, cmds.indexBuffer...)
 
 	cmds.faceCount += faceCount
+	cmds.indexTracker += highestIndex + 1
 }
 
 // DrawRectFilledDC draws a rectangle in the user interface using a solid background.
@@ -113,4 +124,71 @@ func (cmds *cmdList) DrawRectFilledDC(tlx, tly, brx, bry float32, color mgl.Vec4
 
 	// return the vertex data
 	return comboBuffer, indexBuffer, 2
+}
+
+func (cmds *cmdList) drawTreeNodeIcon(isOpen bool, tlx, tly, brx, bry float32, color mgl.Vec4, textureIndex uint32, whitePixelUv mgl.Vec4) ([]float32, []uint32, uint32) {
+	comboBuffer := []float32{}
+	indexBuffer := []uint32{}
+
+	iconW2 := (brx - tlx) * 0.5
+	iconH2 := (tly - bry) * 0.5
+	centerX := tlx + (brx-tlx)*0.5
+	centerY := bry + (tly-bry)*0.5
+
+	if isOpen {
+		// Vert #1 TL (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX-iconW2)
+		comboBuffer = append(comboBuffer, centerY+iconH2)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+
+		// Vert #2 BM (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX)
+		comboBuffer = append(comboBuffer, centerY-iconH2)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+
+		// Vert #3 TR (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX+iconW2)
+		comboBuffer = append(comboBuffer, centerY+iconH2)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+	} else {
+		// Vert #1 TL (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX-iconW2)
+		comboBuffer = append(comboBuffer, centerY+iconH2)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+
+		// Vert #2 BL (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX-iconW2)
+		comboBuffer = append(comboBuffer, centerY-iconH2)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+
+		// Vert #3 RM (vert, uv, texture index, color)
+		comboBuffer = append(comboBuffer, centerX+iconW2)
+		comboBuffer = append(comboBuffer, centerY)
+		comboBuffer = append(comboBuffer, whitePixelUv[0])
+		comboBuffer = append(comboBuffer, whitePixelUv[1])
+		comboBuffer = append(comboBuffer, float32(textureIndex))
+		comboBuffer = append(comboBuffer, color[:]...)
+	}
+
+	indexBuffer = append(indexBuffer, 0)
+	indexBuffer = append(indexBuffer, 1)
+	indexBuffer = append(indexBuffer, 2)
+
+	// return the vertex data
+	return comboBuffer, indexBuffer, 1
 }

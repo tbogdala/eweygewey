@@ -397,17 +397,21 @@ func (ui *Manager) Draw() {
 
 	// for now, loop through all of the windows and copy all of the data into the manager's buffer
 	// FIXME: this could be buffered straight from the cmdList
-	startIndex := uint32(0)
+	var startIndex uint32
 	for _, w := range ui.windows {
 		for _, cmd := range w.cmds {
 			ui.comboBuffer = append(ui.comboBuffer, cmd.comboBuffer...)
 
 			// reindex the index buffer to reference the correct vertex data
+			highestIndex := uint32(0)
 			for _, i := range cmd.indexBuffer {
+				if i > highestIndex {
+					highestIndex = i
+				}
 				ui.indexBuffer = append(ui.indexBuffer, i+startIndex)
 			}
 			ui.faceCount += cmd.faceCount
-			startIndex += cmd.faceCount * 2
+			startIndex += highestIndex + 1
 		}
 	}
 

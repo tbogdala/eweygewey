@@ -84,8 +84,17 @@ type Window struct {
 	// next control to be at most a specific size.
 	requestedItemWidthMaxDC float32
 
+	// indentLevel is the number of indents that each row should start off with.
+	// this means the new row should have a widgetCursorDC that is offset the
+	// amount of (Style.IndentSpacing * indentLevel).
+	indentLevel int
+
 	// cmds is the slice of cmdLists used to to render the window
 	cmds []*cmdList
+
+	// intStorage is a map that allows an int to be stored by string -- typically
+	// an ID from a widget as a key.
+	intStorage map[string]int
 }
 
 // newWindow creates a new window with a top-left coordinate of (x,y) and
@@ -93,6 +102,7 @@ type Window struct {
 func newWindow(id string, x, y, w, h float32, constructor BuildCallback) *Window {
 	wnd := new(Window)
 	wnd.cmds = []*cmdList{}
+	wnd.intStorage = make(map[string]int)
 	wnd.ID = id
 	wnd.Location[0] = x
 	wnd.Location[1] = y
@@ -377,7 +387,7 @@ func (wnd *Window) ContainsPosition(x, y float32) bool {
 // StartRow starts a new row of widgets in the window.
 func (wnd *Window) StartRow() {
 	// adjust the widgetCursor if necessary to start a new row.
-	wnd.widgetCursorDC[0] = wnd.Style.WindowPadding[0]
+	wnd.widgetCursorDC[0] = wnd.Style.WindowPadding[0] + wnd.Style.IndentSpacing*float32(wnd.indentLevel)
 	wnd.widgetCursorDC[1] = wnd.widgetCursorDC[1] - wnd.nextRowCursorOffsetDC
 
 	// clear out the next row height offset
@@ -487,6 +497,37 @@ func (wnd *Window) clampWidgetWidthToReqW(widthDC float32) float32 {
 	return result
 }
 
+// Indent increases the indent level in the window, which also immediately changes
+// the widgetCursorDC value.
+func (wnd *Window) Indent() {
+	wnd.indentLevel++
+	wnd.widgetCursorDC[0] += wnd.Style.IndentSpacing
+}
+
+// Unindent decreases the indent level in the window, which also immediately changes
+// the widgetCursorDC value.
+func (wnd *Window) Unindent() {
+	wnd.indentLevel--
+	if wnd.indentLevel < 0 {
+		wnd.indentLevel = 0
+	}
+	wnd.widgetCursorDC[0] -= wnd.Style.IndentSpacing
+}
+
+// getStoredInt will return an int and a bool indicating if key was present.
+func (wnd *Window) getStoredInt(key string) (int, bool) {
+	val, okay := wnd.intStorage[key]
+	return val, okay
+}
+
+// setStoredInt stores an int value for a given key; returns the previous value
+// and a bool indicating if a value was set previously.
+func (wnd *Window) setStoredInt(key string, value int) (int, bool) {
+	oldValue, present := wnd.intStorage[key]
+	wnd.intStorage[key] = value
+	return oldValue, present
+}
+
 /* *****************************************************************************************************************************************************
 _    _  _____ ______  _____  _____  _____  _____
 | |  | ||_   _||  _  \|  __ \|  ___||_   _|/  ___|
@@ -539,23 +580,13 @@ func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
 
 	// set a default color for the button
 	bgColor := wnd.Style.CheckboxColor
-	buttonPressed := false
+	pressed := false
 
 	// test to see if the mouse is inside the widget
-	mx, my := wnd.Owner.GetMousePosition()
-	if mx > pos[0] && my > pos[1]-checkH && mx < pos[0]+checkW && my < pos[1] {
-		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
-
-		if lmbStatus == MouseClick {
-			buttonPressed = true
-			*value = !(*value)
-		} else {
-			// mouse is down, but was it pressed inside the button?
-			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
-			if mdx > pos[0] && mdy > pos[1]-checkH && mdx < pos[0]+checkW && mdy < pos[1] {
-				wnd.Owner.SetActiveInputID(id)
-			}
-		}
+	buttonTest := wnd.buttonBehavior(id, pos[0], pos[1], checkW, checkH)
+	if buttonTest == buttonPressed {
+		pressed = true
+		*value = !(*value)
 	}
 
 	// render the widget background
@@ -577,11 +608,11 @@ func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
 
 	// if we've captured the mouse click event and registered a button press, clear
 	// the tracking data for the mouse button so that we don't get duplicate matches.
-	if buttonPressed {
+	if pressed {
 		wnd.Owner.ClearMouseButtonAction(0)
 	}
 
-	return buttonPressed, nil
+	return pressed, nil
 }
 
 // Button draws the button widget on screen with the given text.
@@ -610,25 +641,14 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// set a default color for the button
 	bgColor := wnd.Style.ButtonColor
-	buttonPressed := false
+	pressed := false
 
 	// test to see if the mouse is inside the widget
-	mx, my := wnd.Owner.GetMousePosition()
-	if mx > pos[0] && my > pos[1]-buttonH && mx < pos[0]+buttonW && my < pos[1] {
-		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
-
-		if lmbStatus == MouseClick {
-			buttonPressed = true
-		} else if lmbStatus == MouseUp {
-			bgColor = wnd.Style.ButtonHoverColor
-		} else {
-			// mouse is down, but was it pressed inside the button?
-			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
-			if mdx > pos[0] && mdy > pos[1]-buttonH && mdx < pos[0]+buttonW && mdy < pos[1] {
-				bgColor = wnd.Style.ButtonActiveColor
-				wnd.Owner.SetActiveInputID(id)
-			}
-		}
+	buttonTest := wnd.buttonBehavior(id, pos[0], pos[1], buttonW, buttonH)
+	if buttonTest == buttonPressed {
+		pressed = true
+	} else if buttonTest == buttonHover {
+		bgColor = wnd.Style.ButtonHoverColor
 	}
 
 	// render the button background
@@ -650,11 +670,11 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// if we've captured the mouse click event and registered a button press, clear
 	// the tracking data for the mouse button so that we don't get duplicate matches.
-	if buttonPressed {
+	if pressed {
 		wnd.Owner.ClearMouseButtonAction(0)
 	}
 
-	return buttonPressed, nil
+	return pressed, nil
 }
 
 // SliderFloat creates a slider widget that alters a value based on the min/max
@@ -1172,4 +1192,122 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	wnd.setNextRowCursorOffset(editboxH + wnd.Style.EditboxMargin[2] + wnd.Style.EditboxMargin[3])
 
 	return true, nil
+}
+
+// TreeNode draws the tree node widget on screen with the given text. Returns a
+// bool indicating if the tree node is considered to be 'open'.
+func (wnd *Window) TreeNode(id string, text string) (bool, error) {
+	cmd := wnd.getLastCmd()
+
+	// get the font for the text
+	font := wnd.Owner.GetFont(wnd.Style.FontName)
+	if font == nil {
+		return false, fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
+	}
+
+	// calculate the location for the widget
+	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.TreeNodeMargin[0]
+	pos[1] -= wnd.Style.TreeNodeMargin[2]
+
+	// calculate the size necessary for the widget
+	dimX, dimY, _ := font.GetRenderSize(text)
+	nodeW := dimX + wnd.Style.TreeNodePadding[0] + wnd.Style.TreeNodePadding[1]
+	nodeH := dimY + wnd.Style.TreeNodePadding[2] + wnd.Style.TreeNodePadding[3]
+
+	// clamp the width of the widget to respect any requests to size
+	nodeW = wnd.clampWidgetWidthToReqW(nodeW)
+	nodeW = nodeW - wnd.Style.TreeNodeMargin[0] - wnd.Style.TreeNodeMargin[1]
+
+	// check to see if the window has a stored value for this node's ID and
+	// whether or not that value indicates if the node is considered open.
+	var openState bool
+	storedOpenState, statePresent := wnd.getStoredInt(id)
+	if statePresent && storedOpenState > 0 {
+		openState = true
+	}
+
+	// test to see if the mouse is inside the widget
+	pressed := false
+	buttonTest := wnd.buttonBehavior(id, pos[0], pos[1], nodeW, nodeH)
+	if buttonTest == buttonPressed {
+		pressed = true
+	}
+
+	// if it's pressed, we invert the state and store the updated value
+	if pressed {
+		openState = !openState
+		if openState == false {
+			wnd.setStoredInt(id, 0)
+		} else {
+			wnd.setStoredInt(id, 1)
+		}
+	}
+
+	// render the node icons in a square
+	iconX1 := pos[0]
+	iconY1 := pos[1] - nodeH*0.375
+	iconX2 := pos[0] + nodeH*0.25
+	iconY2 := pos[1] - nodeH*0.625
+	combos, indexes, fc := cmd.drawTreeNodeIcon(openState, iconX1, iconY1, iconX2, iconY2, wnd.Style.TreeNodeTextColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+	cmd.AddFaces(combos, indexes, fc)
+	iconXOffset := nodeH*0.25 + 4
+	pos[0] += iconXOffset // adjust the position to acocund for this
+
+	// create the text for the button
+	internalW := nodeW - wnd.Style.TreeNodePadding[0] - wnd.Style.TreeNodePadding[0]
+	centerTextX := (internalW / 2.0) - (dimX / 2.0)
+	textPos := pos
+	textPos[0] += centerTextX
+	textPos[1] -= wnd.Style.TreeNodePadding[2]
+	renderData := font.CreateText(textPos, wnd.Style.TreeNodeTextColor, text)
+	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+
+	// advance the cursor for the width of the text + iconXOffset
+	wnd.addCursorHorizontalDelta(nodeW + iconXOffset + wnd.Style.TreeNodeMargin[0] + wnd.Style.TreeNodeMargin[1])
+	wnd.setNextRowCursorOffset(nodeH + wnd.Style.TreeNodeMargin[2] + wnd.Style.TreeNodeMargin[3])
+
+	// if we've captured the mouse click event and registered a button press, clear
+	// the tracking data for the mouse button so that we don't get duplicate matches.
+	if pressed {
+		wnd.Owner.ClearMouseButtonAction(0)
+	}
+
+	return openState, nil
+}
+
+const (
+	buttonNoAction = 0
+	buttonPressed  = 1
+	buttonHover    = 2
+)
+
+// buttonBehavior returns a enumerated value of the consts above indicating a
+// buttonNoAction, buttonPressed or buttonHover for the mouse interaction with
+// the 'button'.
+// the function also will set the active input id if mouse is down and was
+// originally pressed inside the 'button' space.
+func (wnd *Window) buttonBehavior(id string, minX, minY, width, height float32) int {
+	result := buttonNoAction
+
+	// test to see if the mouse is inside the widget
+	mx, my := wnd.Owner.GetMousePosition()
+	if mx > minX && my > minY-height && mx < minX+width && my < minY {
+		lmbStatus := wnd.Owner.GetMouseButtonAction(0)
+
+		if lmbStatus == MouseClick {
+			result = buttonPressed
+		} else if lmbStatus == MouseUp {
+			result = buttonHover
+		} else {
+			// mouse is down, but was it pressed inside the button?
+			mdx, mdy := wnd.Owner.GetMouseDownPosition(0)
+			if mdx > minX && mdy > minY-height && mdx < minX+width && mdy < minY {
+				result = buttonHover
+				wnd.Owner.SetActiveInputID(id)
+			}
+		}
+	}
+
+	return result
 }

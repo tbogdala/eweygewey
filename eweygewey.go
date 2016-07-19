@@ -40,6 +40,7 @@ type Style struct {
 	EditboxPadding       mgl.Vec4 // [left,right,top,bottom] padding values for Editbox
 	FontName             string   // font name to use by default
 	ImageMargin          mgl.Vec4 // margin for the image widgets
+	IndentSpacing        float32  // the amount of pixels to indent
 	ScrollBarCursorColor mgl.Vec4 // the color of the cursor of the scroll bar
 	ScrollBarBgColor     mgl.Vec4 // the color of the background of the scroll bar
 	ScrollBarWidth       float32  // the width of the scroll bar
@@ -59,6 +60,9 @@ type Style struct {
 	TextMargin           mgl.Vec4 // margin for text widgets
 	TitleBarTextColor    mgl.Vec4 // text color
 	TitleBarBgColor      mgl.Vec4 // window background color
+	TreeNodeTextColor    mgl.Vec4 // text color for tree nodes
+	TreeNodeMargin       mgl.Vec4 // [left,right,top,bottom] margin values for tree nodes
+	TreeNodePadding      mgl.Vec4 // [left,right,top,bottom] padding values for tree nodes
 	WindowBgColor        mgl.Vec4 // window background color
 	WindowPadding        mgl.Vec4 // [left,right,top,bottom] padding values for windows
 }
@@ -120,6 +124,7 @@ var (
 		EditboxPadding:       mgl.Vec4{4, 4, 2, 2},
 		FontName:             "Default",
 		ImageMargin:          mgl.Vec4{0, 0, 0, 0},
+		IndentSpacing:        26.0,
 		ScrollBarCursorColor: ColorIToV(102, 102, 204, 77),
 		ScrollBarBgColor:     ColorIToV(51, 64, 77, 153),
 		ScrollBarWidth:       16.0,
@@ -139,6 +144,9 @@ var (
 		TextColor:            ColorIToV(230, 230, 230, 255),
 		TitleBarTextColor:    ColorIToV(230, 230, 230, 255),
 		TitleBarBgColor:      ColorIToV(69, 69, 138, 255),
+		TreeNodeMargin:       mgl.Vec4{2, 2, 4, 4},
+		TreeNodePadding:      mgl.Vec4{4, 4, 2, 2},
+		TreeNodeTextColor:    ColorIToV(230, 230, 230, 255),
 		WindowBgColor:        ColorIToV(0, 0, 0, 179),
 		WindowPadding:        mgl.Vec4{4, 4, 4, 4},
 	}
