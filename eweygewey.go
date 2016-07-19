@@ -82,7 +82,7 @@ var (
   {
     vs_uv = VERTEX_UV;
     vs_color = VERTEX_COLOR;
-	vs_tex_index = VERTEX_TEXTURE_INDEX;
+    vs_tex_index = VERTEX_TEXTURE_INDEX;
     gl_Position = VIEW * vec4(VERTEX_POSITION, 0.0, 1.0);
   }`
 
@@ -96,8 +96,15 @@ var (
   out vec4 frag_color;
   void main()
   {
-  	int i = int(vs_tex_index);
-	frag_color = vs_color * texture(TEX[i], vs_uv).rgba;
+    int i = int(vs_tex_index);
+    switch(int(vs_tex_index))
+    {
+      case 0: frag_color = vs_color * texture(TEX[0], vs_uv).rgba;
+      case 1: frag_color = vs_color * texture(TEX[1], vs_uv).rgba;
+      case 2: frag_color = vs_color * texture(TEX[2], vs_uv).rgba;
+      case 3: frag_color = vs_color * texture(TEX[3], vs_uv).rgba;
+    }
+    
   }`
 
 	// DefaultStyle is the default style to use for drawing widgets
