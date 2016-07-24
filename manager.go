@@ -353,9 +353,12 @@ func (ui *Manager) bindOpenGLData(style *Style, view mgl.Mat4) {
 		for stackIdx, texID := range ui.textureStack {
 			uniStr := fmt.Sprintf("TEX[%d]", stackIdx+1)
 			texUniLoc := gfx.GetUniformLocation(ui.shader, uniStr)
-			gfx.ActiveTexture(graphics.TEXTURE0 + graphics.Texture(stackIdx+1))
-			gfx.BindTexture(graphics.TEXTURE_2D, texID)
-			gfx.Uniform1i(texUniLoc, int32(stackIdx+1))
+			if texUniLoc >= 0 {
+				fmt.Printf("Binding texID %d to %d (%s)\n", texID, stackIdx+1, uniStr)
+				gfx.ActiveTexture(graphics.TEXTURE0 + graphics.Texture(stackIdx+1))
+				gfx.BindTexture(graphics.TEXTURE_2D, texID)
+				gfx.Uniform1i(texUniLoc, int32(stackIdx+1))
+			}
 		}
 	}
 
@@ -394,6 +397,9 @@ func (ui *Manager) Draw() {
 	// FIXME: move the zdepth definitions elsewhere
 	const minZDepth = -100.0
 	const maxZDepth = 100.0
+
+	gfx.Disable(graphics.DEPTH_TEST)
+	gfx.Enable(graphics.SCISSOR_TEST)
 
 	// for now, loop through all of the windows and copy all of the data into the manager's buffer
 	// FIXME: this could be buffered straight from the cmdList
@@ -453,6 +459,8 @@ func (ui *Manager) Draw() {
 	}
 
 	gfx.BindVertexArray(0)
+	gfx.Disable(graphics.SCISSOR_TEST)
+	gfx.Enable(graphics.DEPTH_TEST)
 }
 
 func (ui *Manager) compileShader(vertShader, fragShader string) (graphics.Program, error) {

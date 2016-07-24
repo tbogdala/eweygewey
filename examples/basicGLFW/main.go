@@ -70,11 +70,7 @@ func renderFrame(frameDelta float64) {
 
 	// draw the user interface
 	uiman.Construct(frameDelta)
-	gfx.Disable(graphics.DEPTH_TEST)
-	gfx.Enable(graphics.SCISSOR_TEST)
 	uiman.Draw()
-	gfx.Disable(graphics.SCISSOR_TEST)
-	gfx.Enable(graphics.DEPTH_TEST)
 }
 
 func main() {
@@ -227,7 +223,6 @@ func main() {
 	editboxWindow := uiman.NewWindow("EditboxWnd", 0.3, 0.99, 0.6, 0.0, func(wnd *gui.Window) {
 		wnd.Button("EditboxButton", "Press Me")
 		wnd.Editbox("Editbox1", &editString)
-		//wnd.Text("<------ EDITBOX HERE ------>")
 	})
 	editboxWindow.Title = "Editbox Test"
 	editboxWindow.ShowTitleBar = false

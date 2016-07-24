@@ -99,12 +99,12 @@ var (
     int i = int(vs_tex_index);
     switch(int(vs_tex_index))
     {
-      case 0: frag_color = vs_color * texture(TEX[0], vs_uv).rgba;
-      case 1: frag_color = vs_color * texture(TEX[1], vs_uv).rgba;
-      case 2: frag_color = vs_color * texture(TEX[2], vs_uv).rgba;
-      case 3: frag_color = vs_color * texture(TEX[3], vs_uv).rgba;
+      case 0: frag_color = vs_color * texture(TEX[0], vs_uv).rgba; break;
+      case 1: frag_color = vs_color * texture(TEX[1], vs_uv).rgba; break;
+      case 2: frag_color = vs_color * texture(TEX[2], vs_uv).rgba; break;
+      case 3: frag_color = vs_color * texture(TEX[3], vs_uv).rgba; break;
     }
-    
+
   }`
 
 	// DefaultStyle is the default style to use for drawing widgets
