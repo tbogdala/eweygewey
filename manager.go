@@ -354,7 +354,6 @@ func (ui *Manager) bindOpenGLData(style *Style, view mgl.Mat4) {
 			uniStr := fmt.Sprintf("TEX[%d]", stackIdx+1)
 			texUniLoc := gfx.GetUniformLocation(ui.shader, uniStr)
 			if texUniLoc >= 0 {
-				fmt.Printf("Binding texID %d to %d (%s)\n", texID, stackIdx+1, uniStr)
 				gfx.ActiveTexture(graphics.TEXTURE0 + graphics.Texture(stackIdx+1))
 				gfx.BindTexture(graphics.TEXTURE_2D, texID)
 				gfx.Uniform1i(texUniLoc, int32(stackIdx+1))
