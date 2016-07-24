@@ -199,11 +199,17 @@ func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
 
-	for _, ch := range msg {
+	for i, ch := range msg {
 		// get the rune data
 		chData := f.locations[ch]
 
-		w += float32(chData.advanceWidth) * fontScale
+		// the last character must use the full glyph width and not just
+		// the advance.
+		if i != len(msg)-1 {
+			w += float32(chData.advanceWidth) * fontScale
+		} else {
+			w += float32(f.GlyphWidth) * fontScale
+		}
 		if float32(chData.advanceHeight) > h {
 			h = float32(chData.advanceHeight)
 		}
@@ -300,7 +306,7 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 
 		// setup the coordinates for ther vetexes
 		x0 := penX
-		y0 := penY - float32(f.GlyphHeight-chData.topSideBearing)*fontScale
+		y0 := penY - float32(f.GlyphHeight-chData.advanceHeight)*fontScale
 		x1 := x0 + float32(f.GlyphWidth)*fontScale
 		y1 := y0 + float32(f.GlyphHeight)*fontScale
 		s0 := chData.uvMinX

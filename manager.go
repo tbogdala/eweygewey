@@ -205,6 +205,35 @@ func (ui *Manager) NewWindow(id string, x, y, w, h float32, constructor BuildCal
 	return wnd
 }
 
+// GetWindow returns a window based on the id string passed in
+func (ui *Manager) GetWindow(id string) *Window {
+	for _, wnd := range ui.windows {
+		if wnd.ID == id {
+			return wnd
+		}
+	}
+
+	return nil
+}
+
+// RemoveWindow will remove the window from the user interface.
+func (ui *Manager) RemoveWindow(wndToRemove *Window) {
+	length := len(ui.windows)
+	for i, wnd := range ui.windows {
+		if wnd.ID == wndToRemove.ID {
+			if i == length-1 {
+				if length == 1 {
+					ui.windows = ui.windows[:0]
+				} else {
+					ui.windows = ui.windows[:i]
+				}
+			} else {
+				ui.windows = append(ui.windows[:i], ui.windows[i+1:]...)
+			}
+		}
+	}
+}
+
 // NewFont loads the font from a file and 'registers' it with the UI manager.
 func (ui *Manager) NewFont(name string, fontFilepath string, scaleInt int, glyphs string) (*Font, error) {
 	f, err := newFont(ui, fontFilepath, scaleInt, glyphs)

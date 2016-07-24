@@ -270,7 +270,9 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 
 	// create our own handler for key input so that it can buffer the keys
 	// and then consume them in an edit box or whatever widget has focus.
-	window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+	var prevKeyCallback glfw.KeyCallback
+	var prevCharModsCallback glfw.CharModsCallback
+	prevKeyCallback = window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 		if action != glfw.Press && action != glfw.Repeat {
 			return
 		}
@@ -314,6 +316,11 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 
 		// add it to the keys that have been buffered
 		keyBuffer = append(keyBuffer, kpe)
+
+		// if there was a pre-existing callback, we'll chain it here
+		if prevKeyCallback != nil {
+			prevKeyCallback(w, key, scancode, action, mods)
+		}
 	})
 
 	window.SetCharModsCallback(func(w *glfw.Window, char rune, mods glfw.ModifierKey) {
@@ -340,6 +347,11 @@ func SetInputHandlers(uiman *gui.Manager, window *glfw.Window) {
 
 		// add it to the keys that have been buffered
 		keyBuffer = append(keyBuffer, kpe)
+
+		// if there was a pre-existing callback, we'll chain it here
+		if prevCharModsCallback != nil {
+			prevCharModsCallback(w, char, mods)
+		}
 	})
 
 	uiman.GetKeyEvents = func() []gui.KeyPressEvent {
