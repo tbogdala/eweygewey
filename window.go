@@ -577,8 +577,10 @@ func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
 	pos[1] -= wnd.Style.CheckboxMargin[2]
 
 	// calculate the size necessary for the widget
-	checkW := wnd.Style.CheckboxPadding[0] + wnd.Style.CheckboxPadding[1] + wnd.Style.CheckboxCursorWidth
-	checkH := wnd.Style.CheckboxPadding[2] + wnd.Style.CheckboxPadding[3] + (wnd.Style.CheckboxCursorWidth * (wnd.Height / wnd.Width))
+	screenW, screenH := wnd.Owner.GetResolution()
+	ratio := float32(screenH) / float32(screenW)
+	checkW := wnd.Style.CheckboxPadding[0] + wnd.Style.CheckboxPadding[1] + wnd.Style.CheckboxCursorWidth*ratio
+	checkH := wnd.Style.CheckboxPadding[2] + wnd.Style.CheckboxPadding[3] + wnd.Style.CheckboxCursorWidth
 
 	// clamp the width of the widget to respect any requests to size
 	checkW = wnd.clampWidgetWidthToReqW(checkW)
@@ -866,7 +868,7 @@ func (wnd *Window) sliderHitTest(id string) (bool, float32, float32) {
 
 	// calculate the size necessary for the widget
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
-	dimY := float32(font.GlyphHeight) * font.GetCurrentScale()
+	_, dimY, _ := font.GetRenderSize("0.0")
 	sliderW := wndWidth - wnd.Style.WindowPadding[0] - wnd.Style.WindowPadding[1] - wnd.Style.SliderMargin[0] - wnd.Style.SliderMargin[1]
 	sliderH := dimY + wnd.Style.SliderPadding[2] + wnd.Style.SliderPadding[3]
 

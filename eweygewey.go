@@ -118,7 +118,7 @@ var (
 		ButtonPadding:        mgl.Vec4{2, 2, 2, 2},
 		CheckboxColor:        ColorIToV(128, 128, 128, 179),
 		CheckboxCheckColor:   ColorIToV(204, 128, 120, 255),
-		CheckboxCursorWidth:  12.0,
+		CheckboxCursorWidth:  15.0,
 		CheckboxMargin:       mgl.Vec4{2, 2, 2, 2},
 		CheckboxPadding:      mgl.Vec4{2, 2, 2, 2},
 		EditboxBgColor:       ColorIToV(128, 128, 128, 179),
