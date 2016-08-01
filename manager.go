@@ -434,6 +434,10 @@ func (ui *Manager) Draw() {
 	var startIndex uint32
 	for _, w := range ui.windows {
 		for _, cmd := range w.cmds {
+			if cmd.isCustom {
+				continue
+			}
+
 			ui.comboBuffer = append(ui.comboBuffer, cmd.comboBuffer...)
 
 			// reindex the index buffer to reference the correct vertex data
