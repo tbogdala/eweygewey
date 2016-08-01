@@ -449,6 +449,11 @@ func (ui *Manager) Draw() {
 		}
 	}
 
+	// make sure that we're going to draw something
+	if startIndex == 0 {
+		return
+	}
+
 	gfx.BindVertexArray(ui.vao)
 	view := mgl.Ortho(0.5, float32(ui.width)+0.5, 0.5, float32(ui.height)+0.5, minZDepth, maxZDepth)
 

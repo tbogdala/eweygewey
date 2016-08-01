@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	fontScale    = 18
+	fontScale    = 14
 	fontFilepath = "../assets/Oswald-Heavy.ttf"
 	fontGlyphs   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890., :[]{}\\|<>;\"'~`?/-+_=()*&^%$#@!"
 	testImage    = "../assets/potions.png"
@@ -143,6 +143,7 @@ func main() {
 	mouseTestWindow.AutoAdjustHeight = true
 
 	var color [4]int
+	var truth bool
 
 	// create a window that looks a bit like a property editor
 	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.01, 0.85, 0.2, 0.25, func(wnd *gui.Window) {
@@ -184,6 +185,10 @@ func main() {
 		wnd.SliderInt("Color3", &color[2], 0, 255)
 		wnd.RequestItemWidthMax(0.165)
 		wnd.SliderInt("Color4", &color[3], 0, 255)
+
+		wnd.StartRow()
+		wnd.Checkbox("checkTrue", &truth)
+		wnd.Text("Active")
 
 		wnd.Separator()
 		var nodeOpen bool
@@ -268,7 +273,7 @@ func main() {
 	light.DiffuseIntensity = 0.70
 	light.SpecularIntensity = 0.10
 	light.AmbientIntensity = 0.20
-	light.Attenuation = 1.0
+	light.QuadraticAttenuation = 0.20
 	renderer.ActiveLights[0] = light
 
 	// load the diffuse shader

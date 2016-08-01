@@ -219,7 +219,7 @@ func (wnd *Window) GetFrameSize() (float32, float32, float32, float32) {
 		if font != nil {
 			_, dimY, _ := font.GetRenderSize(wnd.GetTitleString())
 			// TODO: for now just add 1 pixel on each side of the string for padding
-			winhDC += float32(dimY + 4)
+			winhDC += float32(dimY) + wnd.Style.TitleBarPadding[2] + wnd.Style.TitleBarPadding[3]
 		}
 	}
 	return winxDC, winyDC, winwDC, winhDC
@@ -315,8 +315,11 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 		font := wnd.Owner.GetFont(wnd.Style.FontName)
 		_, dimY, _ := font.GetRenderSize(titleString)
 
-		// TODO: for now just add 1 pixel on each side of the string for padding
-		titleBarHeight = float32(dimY + 4)
+		titleBarHeight = float32(dimY) + wnd.Style.TitleBarPadding[2] + wnd.Style.TitleBarPadding[3]
+		titleBarTextPos := mgl.Vec3{
+			x + wnd.Style.TitleBarPadding[0],
+			y - wnd.Style.TitleBarPadding[2],
+			0}
 
 		// render the title bar background
 		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y, x+w, y-titleBarHeight, wnd.Style.TitleBarBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
@@ -324,12 +327,12 @@ func (wnd *Window) buildFrame(totalControlHeightDC float32) {
 
 		// render the title bar text
 		if len(wnd.Title) > 0 {
-			renderData := font.CreateText(mgl.Vec3{x + wnd.Style.WindowPadding[0], y, 0}, wnd.Style.TitleBarTextColor, wnd.Title)
+			renderData := font.CreateText(titleBarTextPos, wnd.Style.TitleBarTextColor, wnd.Title)
 			firstCmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 		}
 
 		// render the rest of the window background
-		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h, wnd.Style.WindowBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
+		combos, indexes, fc = firstCmd.DrawRectFilledDC(x, y-titleBarHeight, x+w, y-h-titleBarHeight, wnd.Style.WindowBgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		firstCmd.PrefixFaces(combos, indexes, fc)
 	} else {
 		// build the background of the window
@@ -550,6 +553,8 @@ func (wnd *Window) Text(msg string) error {
 
 	// calculate the location for the widget
 	pos := wnd.getCursorDC()
+	pos[0] += wnd.Style.TextMargin[0]
+	pos[1] -= wnd.Style.TextMargin[2]
 
 	// create the text widget itself
 	renderData := font.CreateText(pos, wnd.Style.TextColor, msg)
@@ -632,12 +637,12 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// calculate the size necessary for the widget
 	dimX, dimY, _ := font.GetRenderSize(text)
-	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1]
+	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1] +
+		wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1]
 	buttonH := dimY + wnd.Style.ButtonPadding[2] + wnd.Style.ButtonPadding[3]
 
 	// clamp the width of the widget to respect any requests to size
 	buttonW = wnd.clampWidgetWidthToReqW(buttonW)
-	buttonW = buttonW - wnd.Style.ButtonMargin[0] - wnd.Style.ButtonMargin[1]
 
 	// set a default color for the button
 	bgColor := wnd.Style.ButtonColor
@@ -656,11 +661,10 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	cmd.AddFaces(combos, indexes, fc)
 
 	// create the text for the button
-	buttonInternalW := buttonW - wnd.Style.ButtonPadding[0] - wnd.Style.ButtonPadding[0]
-	centerTextX := (buttonInternalW / 2.0) - (dimX / 2.0)
+	centerTextX := (buttonW - dimX) / 2.0
 	textPos := pos
-	textPos[0] += centerTextX
-	textPos[1] -= wnd.Style.ButtonPadding[2]
+	textPos[0] = textPos[0] + centerTextX
+	textPos[1] = textPos[1] - wnd.Style.ButtonPadding[2]
 	renderData := font.CreateText(textPos, wnd.Style.ButtonTextColor, text)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 

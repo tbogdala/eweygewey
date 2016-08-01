@@ -80,6 +80,8 @@ Current Features
     * Scroll bars
     * Images
     * Editbox
+    * Checkbox
+    * Separator
     * Custom drawn 3d widgets
 
 TODO
