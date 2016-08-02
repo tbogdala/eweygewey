@@ -285,7 +285,7 @@ func main() {
 
 	// create a 2x2x2 cube to render
 	const cubeRadsPerSec = math.Pi / 4.0
-	cube := fizzle.CreateCube("diffuse", -1, -1, -1, 1, 1, 1)
+	cube := fizzle.CreateCube(-1, -1, -1, 1, 1, 1)
 	cube.Core.Shader = diffuseShader
 	cube.Core.DiffuseColor = mgl.Vec4{0.9, 0.05, 0.05, 1.0}
 	cube.Core.SpecularColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
