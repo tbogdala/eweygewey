@@ -1062,9 +1062,14 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	pos[0] += wnd.Style.EditboxMargin[0]
 	pos[1] -= wnd.Style.EditboxMargin[2]
 
-	// calculate the size necessary for the widget
+	// calculate the size necessary for the widget; if the text is empty use
+	// a const string to calculate the height.
 	_, _, wndWidth, _ := wnd.GetDisplaySize()
-	_, dimY, _ := font.GetRenderSize(*value)
+	textToSize := *value
+	if len(textToSize) == 0 {
+		textToSize = "FIXEDSIZE"
+	}
+	_, dimY, _ := font.GetRenderSize(textToSize)
 	editboxW := wndWidth - wnd.widgetCursorDC[0] - wnd.Style.WindowPadding[1] - wnd.Style.EditboxMargin[1]
 	editboxH := dimY + wnd.Style.EditboxPadding[2] + wnd.Style.EditboxPadding[3]
 
@@ -1164,12 +1169,14 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	combos, indexes, fc := cmd.DrawRectFilledDC(pos[0], pos[1], pos[0]+editboxW, pos[1]-editboxH, bgColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 	cmd.AddFaces(combos, indexes, fc)
 
-	// create the text for the button
-	textPos := pos
-	textPos[0] += wnd.Style.EditboxPadding[0]
-	textPos[1] -= wnd.Style.EditboxPadding[2]
-	renderData := font.CreateText(textPos, wnd.Style.EditboxTextColor, *value)
-	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+	// create the text for the button if the string is not empty
+	if len(*value) > 0 {
+		textPos := pos
+		textPos[0] += wnd.Style.EditboxPadding[0]
+		textPos[1] -= wnd.Style.EditboxPadding[2]
+		renderData := font.CreateText(textPos, wnd.Style.EditboxTextColor, *value)
+		cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+	}
 
 	// if we're the active editor, deal with drawing the cursor here
 	if editorState != nil && editorState.ID == id {
