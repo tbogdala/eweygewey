@@ -577,9 +577,8 @@ func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
 	pos[1] -= wnd.Style.CheckboxMargin[2]
 
 	// calculate the size necessary for the widget
-	screenW, screenH := wnd.Owner.GetResolution()
-	ratio := float32(screenH) / float32(screenW)
-	checkW := wnd.Style.CheckboxPadding[0] + wnd.Style.CheckboxPadding[1] + wnd.Style.CheckboxCursorWidth*ratio
+	//screenW, screenH := wnd.Owner.GetResolution()
+	checkW := wnd.Style.CheckboxPadding[0] + wnd.Style.CheckboxPadding[1] + wnd.Style.CheckboxCursorWidth
 	checkH := wnd.Style.CheckboxPadding[2] + wnd.Style.CheckboxPadding[3] + wnd.Style.CheckboxCursorWidth
 
 	// clamp the width of the widget to respect any requests to size
@@ -602,9 +601,12 @@ func (wnd *Window) Checkbox(id string, value *bool) (bool, error) {
 
 	// do we show the check in the checkbox
 	if *value {
-		// render the slider cursor
-		combos, indexes, fc = cmd.DrawRectFilledDC(pos[0]+wnd.Style.SliderPadding[0], pos[1]-wnd.Style.SliderPadding[2],
-			pos[0]+checkW-wnd.Style.SliderPadding[1], pos[1]-checkH+wnd.Style.SliderPadding[3],
+		// render the checkbox cursor
+		combos, indexes, fc = cmd.DrawRectFilledDC(
+			pos[0]+wnd.Style.CheckboxPadding[0],
+			pos[1]-wnd.Style.CheckboxPadding[2],
+			pos[0]+checkW-wnd.Style.CheckboxPadding[1], //-wnd.Style.CheckboxPadding[1],
+			pos[1]-checkH+wnd.Style.CheckboxPadding[3], //+wnd.Style.CheckboxPadding[3],
 			wnd.Style.CheckboxCheckColor, defaultTextureSampler, wnd.Owner.whitePixelUv)
 		cmd.AddFaces(combos, indexes, fc)
 	}
@@ -644,7 +646,8 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	buttonH := dimY + wnd.Style.ButtonPadding[2] + wnd.Style.ButtonPadding[3]
 
 	// clamp the width of the widget to respect any requests to size
-	buttonW = wnd.clampWidgetWidthToReqW(buttonW)
+	buttonW = wnd.clampWidgetWidthToReqW(buttonW + wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1])
+	buttonW = buttonW - wnd.Style.ButtonMargin[0] - wnd.Style.ButtonMargin[1]
 
 	// set a default color for the button
 	bgColor := wnd.Style.ButtonColor
