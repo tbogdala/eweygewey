@@ -21,6 +21,7 @@ import (
 	"image/color"
 	"image/draw"
 	"io/ioutil"
+	"math"
 	"os"
 
 	mgl "github.com/go-gl/mathgl/mgl32"
@@ -33,9 +34,9 @@ import (
 
 // runeData stores information pulled from the freetype parsing of glyphs.
 type runeData struct {
-	imgX, imgY                    int // offset into the image texture for the top left position of rune
-	advanceWidth, leftSideBearing int // HMetric data from glyph
-	advanceHeight, topSideBearing int // VMetric data from glyph
+	imgX, imgY                    int     // offset into the image texture for the top left position of rune
+	advanceWidth, leftSideBearing float32 // HMetric data from glyph
+	advanceHeight, topSideBearing float32 // VMetric data from glyph
 	uvMinX, uvMinY                float32
 	uvMaxX, uvMaxY                float32
 }
@@ -47,8 +48,8 @@ type Font struct {
 	Texture     graphics.Texture
 	TextureSize int
 	Glyphs      string
-	GlyphHeight int
-	GlyphWidth  int
+	GlyphHeight float32
+	GlyphWidth  float32
 	Owner       *Manager
 	locations   map[rune]runeData
 	opts        truetype.Options
@@ -92,16 +93,18 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 	// width and height are getting +2 here since the glyph will be buffered by a
 	// pixel in the texture
 	glyphDimensions := glyphBounds.Max.Sub(glyphBounds.Min)
-	glyphWidth := int(glyphDimensions.X>>6) + 2
-	glyphHeight := int(glyphDimensions.Y>>6) + 2
+	glyphWidth := fixedInt26ToFloat(glyphDimensions.X)
+	glyphHeight := fixedInt26ToFloat(glyphDimensions.Y)
+	glyphCeilWidth := int(math.Ceil(float64(glyphWidth)))
+	glyphCeilHeight := int(math.Ceil(float64(glyphHeight)))
 
 	// create the buffer image used to draw the glyphs
-	glyphRect := image.Rect(0, 0, glyphWidth, glyphHeight)
+	glyphRect := image.Rect(0, 0, glyphCeilWidth, glyphCeilHeight)
 	glyphImg := image.NewRGBA(glyphRect)
 
 	// calculate the area needed for the font texture
 	var fontTexSize = 2
-	minAreaNeeded := (glyphWidth) * (glyphHeight) * len(glyphs)
+	minAreaNeeded := (glyphCeilWidth) * (glyphCeilHeight) * len(glyphs)
 	for (fontTexSize * fontTexSize) < minAreaNeeded {
 		fontTexSize *= 2
 		if fontTexSize > 2048 {
@@ -114,7 +117,7 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 	fontImg := image.NewRGBA(fontImgRect)
 
 	// the number of glyphs
-	fontRowSize := fontTexSize / (glyphWidth)
+	fontRowSize := fontTexSize / glyphCeilWidth
 
 	// create the freetype context
 	c := ft.NewContext()
@@ -134,15 +137,15 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 		metricH := ttfData.HMetric(scale, index)
 		metricV := ttfData.VMetric(scale, index)
 
-		fxGW := fx * glyphWidth
-		fyGH := fy * glyphHeight
+		fxGW := fx * glyphCeilWidth
+		fyGH := fy * glyphCeilHeight
 
 		f.locations[ch] = runeData{
 			fxGW, fyGH,
-			int(metricH.AdvanceWidth) >> 6, int(metricH.LeftSideBearing) >> 6,
-			int(metricV.AdvanceHeight) >> 6, int(metricV.TopSideBearing) >> 6,
-			float32(fxGW) / float32(fontTexSize), float32(fyGH+glyphHeight) / float32(fontTexSize),
-			float32(fxGW+glyphWidth) / float32(fontTexSize), float32(fyGH) / float32(fontTexSize),
+			fixedInt26ToFloat(metricH.AdvanceWidth), fixedInt26ToFloat(metricH.LeftSideBearing),
+			fixedInt26ToFloat(metricV.AdvanceHeight), fixedInt26ToFloat(metricV.TopSideBearing),
+			float32(fxGW) / float32(fontTexSize), (float32(fyGH) + glyphHeight) / float32(fontTexSize),
+			(float32(fxGW) + glyphWidth) / float32(fontTexSize), float32(fyGH) / float32(fontTexSize),
 		}
 
 		pt := ft.Pt(1, 1+int(c.PointToFixed(float64(scaleInt))>>6))
@@ -152,8 +155,8 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 		}
 
 		// copy the glyph image into the font image
-		for subY := 0; subY < glyphHeight; subY++ {
-			for subX := 0; subX < glyphWidth; subX++ {
+		for subY := 0; subY < glyphCeilHeight; subY++ {
+			for subX := 0; subX < glyphCeilWidth; subX++ {
 				glyphRGBA := glyphImg.RGBAAt(subX, subY)
 				fontImg.SetRGBA((fxGW)+subX, (fyGH)+subY, glyphRGBA)
 			}
@@ -206,25 +209,21 @@ func (f *Font) GetRenderSize(msg string) (float32, float32, float32) {
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
 
-	msgLen := len(msg)
-	for i, ch := range msg {
+	for _, ch := range msg {
 		bounds, _, _ := f.face.GlyphBounds(ch)
 		glyphDimensions := bounds.Max.Sub(bounds.Min)
 
-		if i < msgLen-1 {
-			adv, _ := f.face.GlyphAdvance(ch)
-			w += float32(adv.Round())
-		} else {
-			w += float32(glyphDimensions.X.Round())
-		}
+		adv, _ := f.face.GlyphAdvance(ch)
+		w += fixedInt26ToFloat(adv)
 
-		if h < float32(glyphDimensions.Y.Round()) {
-			h = float32(glyphDimensions.Y.Round())
+		glyphDYf := fixedInt26ToFloat(glyphDimensions.Y)
+		if h < glyphDYf {
+			h = glyphDYf
 		}
 	}
 
 	metrics := f.face.Metrics()
-	advH := float32(metrics.Ascent.Round())
+	advH := fixedInt26ToFloat(metrics.Ascent)
 
 	return w * fontScale, h * fontScale, advH * fontScale
 }
@@ -242,7 +241,7 @@ func (f *Font) OffsetFloor(msg string, offset float32) float32 {
 		if !ok {
 			fmt.Printf("ERROR on glyphadvance for %c!\n", ch)
 		}
-		advf := float32(adv.Round())
+		advf := fixedInt26ToFloat(adv)
 
 		// break if we go over the distance
 		if w+advf > offset {
@@ -261,20 +260,25 @@ func (f *Font) OffsetForIndex(msg string, stopIndex int) float32 {
 
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
-
 	for i, ch := range msg {
 		// calculate up to the stopIndex but do not include it
 		if i >= stopIndex {
 			break
 		}
-
 		adv, _ := f.face.GlyphAdvance(ch)
-
-		// break if we go over the distance
-		w += float32(adv.Round())
+		w += fixedInt26ToFloat(adv)
 	}
 
 	return w * fontScale
+}
+
+// fixedInt26ToFloat converts a fixed int 26:6 precision to a float32.
+func fixedInt26ToFloat(fixedInt fixed.Int26_6) float32 {
+	var result float32
+	i := int32(fixedInt)
+	result += float32(i >> 6)
+	result += float32(i&0x003F) / float32(64.0)
+	return result
 }
 
 // TextRenderData is a structure containing the raw OpenGL VBO data needed
@@ -328,10 +332,10 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 			advWidth := float32(glyphAdvW.Round())
 		*/
 
-		glyphH := float32(f.GlyphHeight)
-		glyphW := float32(f.GlyphWidth)
-		advHeight := float32(chData.advanceHeight)
-		advWidth := float32(chData.advanceWidth)
+		glyphH := f.GlyphHeight
+		glyphW := f.GlyphWidth
+		advHeight := chData.advanceHeight
+		advWidth := chData.advanceWidth
 
 		// setup the coordinates for ther vetexes
 		x0 := penX

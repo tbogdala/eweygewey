@@ -641,8 +641,7 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 
 	// calculate the size necessary for the widget
 	dimX, dimY, _ := font.GetRenderSize(text)
-	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1] +
-		wnd.Style.ButtonMargin[0] + wnd.Style.ButtonMargin[1]
+	buttonW := dimX + wnd.Style.ButtonPadding[0] + wnd.Style.ButtonPadding[1]
 	buttonH := dimY + wnd.Style.ButtonPadding[2] + wnd.Style.ButtonPadding[3]
 
 	// clamp the width of the widget to respect any requests to size
@@ -670,6 +669,7 @@ func (wnd *Window) Button(id string, text string) (bool, error) {
 	textPos := pos
 	textPos[0] = textPos[0] + centerTextX
 	textPos[1] = textPos[1] - wnd.Style.ButtonPadding[2]
+
 	renderData := font.CreateText(textPos, wnd.Style.ButtonTextColor, text)
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
