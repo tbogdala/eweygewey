@@ -11,7 +11,7 @@ UNDER CONSTRUCTION
 
 At present, it is very much in an alpha stage with new development adding in
 features, widgets and possibly API breaks. Any API break should increment the
-minor version number and any patch release tags should remain compatable even
+minor version number and any patch release tags should remain compatible even
 in development 0.x versions.
 
 Screenshots
