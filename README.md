@@ -1,5 +1,5 @@
-EweyGewey
-=========
+EweyGewey v0.1.0
+================
 
 EweyGewey is an OpenGL GUI library written in the [Go][golang] programming language
 that is designed to be integrated easily into an OpenGL application.
@@ -10,7 +10,9 @@ UNDER CONSTRUCTION
 ==================
 
 At present, it is very much in an alpha stage with new development adding in
-features, widgets and possibly API breaks.
+features, widgets and possibly API breaks. Any API break should increment the
+minor version number and any patch release tags should remain compatable even
+in development 0.x versions.
 
 Screenshots
 -----------
