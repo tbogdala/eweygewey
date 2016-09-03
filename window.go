@@ -1101,7 +1101,7 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 	// otherwise we leave them be.
 	editorState := wnd.Owner.getActiveTextEditor()
 	if editorState != nil && editorState.ID == id {
-		// we're the active ditor so set the background color accordingly
+		// we're the active editor so set the background color accordingly
 		bgColor = wnd.Style.EditboxActiveColor
 
 		// grab the key events
@@ -1121,6 +1121,9 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 				case EweyKeyLeft:
 					if editorState.CursorOffset > 0 {
 						editorState.CursorOffset--
+					}
+					if editorState.CharacterShift > 0 {
+						editorState.CharacterShift--
 					}
 				case EweyKeyBackspace:
 					// erase the rune previous to the cursor
@@ -1144,6 +1147,7 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 					editorState.CursorOffset = len(*value)
 				case EweyKeyHome:
 					editorState.CursorOffset = 0
+					editorState.CharacterShift = 0
 				case EweyKeyInsert:
 					if event.ShiftDown {
 						clippy, _ := wnd.Owner.GetClipboardString()
@@ -1177,8 +1181,20 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 		textPos := pos
 		textPos[0] += wnd.Style.EditboxPadding[0]
 		textPos[1] -= wnd.Style.EditboxPadding[2]
-		renderData := font.CreateText(textPos, wnd.Style.EditboxTextColor, *value)
+		cursorPos := -1
+		textOffset := -1
+		if editorState != nil && editorState.ID == id {
+			cursorPos = editorState.CursorOffset
+			textOffset = editorState.CharacterShift
+		}
+		renderData := font.CreateTextAdv(textPos, wnd.Style.EditboxTextColor, editboxW-wnd.Style.EditboxCursorWidth, textOffset, cursorPos, *value)
 		cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
+
+		// if we overflowed the cursor, start shifting the text over one frame at a time until
+		// we don't overflow anymore.
+		if renderData.CursorOverflowRight {
+			editorState.CharacterShift++
+		}
 	}
 
 	// if we're the active editor, deal with drawing the cursor here
@@ -1193,7 +1209,7 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 
 		// draw the cursor if we're within the blink duration
 		if editorState.CursorTimer < wnd.Style.EditboxBlinkDuration {
-			cursorOffsetDC := font.OffsetForIndex(*value, editorState.CursorOffset)
+			cursorOffsetDC := font.OffsetForIndexAdv(*value, editorState.CharacterShift, editorState.CursorOffset)
 			cursorOffsetDC += wnd.Style.EditboxPadding[0]
 
 			// render the editbox cursor

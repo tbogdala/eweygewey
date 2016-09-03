@@ -28,6 +28,9 @@ type textEditState struct {
 	// episode of the cursor. The cursor should be shown during the interval
 	// [0 .. Style.EditboxBlinkDuration].
 	CursorTimer float32
+
+	// CharacterShift is the amount of characters to shift the dispayed text.
+	CharacterShift int
 }
 
 // Manager holds all of the widgets and knows how to draw the UI.

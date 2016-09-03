@@ -256,13 +256,19 @@ func (f *Font) OffsetFloor(msg string, offset float32) float32 {
 // OffsetForIndex returns the width offset that will fit just before the `stopIndex`
 // number character in the msg.
 func (f *Font) OffsetForIndex(msg string, stopIndex int) float32 {
+	return f.OffsetForIndexAdv(msg, 0, stopIndex)
+}
+
+// OffsetForIndexAdv returns the width offset that will fit just before the `stopIndex`
+// number character in the msg, starting at charStartIndex.
+func (f *Font) OffsetForIndexAdv(msg string, charStartIndex int, stopIndex int) float32 {
 	var w float32
 
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
-	for i, ch := range msg {
+	for i, ch := range msg[charStartIndex:] {
 		// calculate up to the stopIndex but do not include it
-		if i >= stopIndex {
+		if i+charStartIndex >= stopIndex {
 			break
 		}
 		adv, _ := f.face.GlyphAdvance(ch)
@@ -284,38 +290,58 @@ func fixedInt26ToFloat(fixedInt fixed.Int26_6) float32 {
 // TextRenderData is a structure containing the raw OpenGL VBO data needed
 // to render a text string for a given texture.
 type TextRenderData struct {
-	ComboBuffer   []float32 // the combo VBO data (vert/uv/color)
-	IndexBuffer   []uint32  // the element index VBO data
-	Faces         uint32    // the number of faces in the text string
-	Width         float32   // the width in pixels of the text string
-	Height        float32   // the height in pixels of the text string
-	AdvanceHeight float32   // the amount of pixels to move the pen in the verticle direction
+	ComboBuffer         []float32 // the combo VBO data (vert/uv/color)
+	IndexBuffer         []uint32  // the element index VBO data
+	Faces               uint32    // the number of faces in the text string
+	Width               float32   // the width in pixels of the text string
+	Height              float32   // the height in pixels of the text string
+	AdvanceHeight       float32   // the amount of pixels to move the pen in the verticle direction
+	CursorOverflowRight bool      // whether or not the cursor was too far to the right for string width
 }
 
 // CreateText makes a new renderable object from the supplied string
 // using the data in the font. The data is returned as a TextRenderData object.
 func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderData {
+	return f.CreateTextAdv(pos, color, -1.0, -1, -1, msg)
+}
+
+// CreateText makes a new renderable object from the supplied string
+// using the data in the font. The string returned will be the maximum amount of the msg that fits
+// the specified maxWidth (if greater than 0.0) starting at the charOffset specified.
+// The data is returned as a TextRenderData object.
+func (f *Font) CreateTextAdv(pos mgl.Vec3, color mgl.Vec4, maxWidth float32, charOffset int, cursorPosition int, msg string) TextRenderData {
 	// this is the texture ID of the font to use in the shader; by default
 	// the library always binds the font to the first texture sampler.
 	const floatTexturePosition = 0.0
 
+	// sanity checks
+	originalLen := len(msg)
+	trimmedMsg := msg
+	if charOffset > 0 && charOffset < originalLen {
+		// trim the string based on incoming character offset
+		trimmedMsg = trimmedMsg[charOffset:]
+	}
+
 	// get the length of our message
-	msgLength := len(msg)
+	msgLength := len(trimmedMsg)
 
 	// create the arrays to hold the data to buffer to OpenGL
 	comboBuffer := make([]float32, 0, msgLength*(2+2+4)*4) // pos, uv, color4
 	indexBuffer := make([]uint32, 0, msgLength*6)          // two faces * three indexes
 
 	// do a preliminary test to see how much room the message will take up
-	dimX, dimY, advH := f.GetRenderSize(msg)
+	dimX, dimY, advH := f.GetRenderSize(trimmedMsg)
 
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
 
 	// loop through the message
+	var totalChars = 0
+	var scaledSize float32 = 0.0
+	var cursorOverflowRight bool
 	var penX = pos[0]
 	var penY = pos[1] - float32(advH)
-	for chi, ch := range msg {
+	for chi, ch := range trimmedMsg {
 		// get the rune data
 		chData := f.locations[ch]
 
@@ -336,6 +362,21 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 		glyphW := f.GlyphWidth
 		advHeight := chData.advanceHeight
 		advWidth := chData.advanceWidth
+
+		// possibly stop here if we're going to overflow the max width
+		if maxWidth > 0.0 && scaledSize+(advWidth*fontScale) > maxWidth {
+			// we overflowed the size of the string, now check to see if
+			// the cursor position is covered within this string or if that hasn't
+			// been reached yet.
+			if cursorPosition >= 0 && cursorPosition-charOffset > chi {
+				cursorOverflowRight = true
+			}
+
+			// adjust the dimX here since we shortened the string
+			dimX = scaledSize
+			break
+		}
+		scaledSize += advWidth * fontScale
 
 		// setup the coordinates for ther vetexes
 		x0 := penX
@@ -387,15 +428,17 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 
 		// advance the pen
 		penX += advWidth * fontScale
+		totalChars++
 	}
 
 	return TextRenderData{
-		ComboBuffer:   comboBuffer,
-		IndexBuffer:   indexBuffer,
-		Faces:         uint32(msgLength * 2),
-		Width:         float32(dimX),
-		Height:        float32(dimY),
-		AdvanceHeight: float32(advH),
+		ComboBuffer:         comboBuffer,
+		IndexBuffer:         indexBuffer,
+		Faces:               uint32(totalChars * 2),
+		Width:               float32(dimX),
+		Height:              float32(dimY),
+		AdvanceHeight:       float32(advH),
+		CursorOverflowRight: cursorOverflowRight,
 	}
 }
 

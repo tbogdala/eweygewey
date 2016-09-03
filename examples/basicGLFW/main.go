@@ -144,6 +144,7 @@ func main() {
 
 	var color [4]int
 	var truth bool
+	var longString = "This is a longer text string and the editor probably can't show all of it."
 
 	// create a window that looks a bit like a property editor
 	propertyTestWindow := uiman.NewWindow("PropertyTest", 0.01, 0.85, 0.2, 0.25, func(wnd *gui.Window) {
@@ -152,6 +153,9 @@ func main() {
 		wnd.Button("TestBtn0", "Button0")
 		wnd.RequestItemWidthMin(.5)
 		wnd.Button("TestBtn1", "Button1")
+
+		wnd.Separator()
+		wnd.Editbox("TestLongEdit", &longString)
 
 		const colWidth = 0.33
 		wnd.Separator()
