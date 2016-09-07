@@ -219,22 +219,29 @@ func (ui *Manager) GetWindow(id string) *Window {
 	return nil
 }
 
-// RemoveWindow will remove the window from the user interface.
-func (ui *Manager) RemoveWindow(wndToRemove *Window) {
-	length := len(ui.windows)
-	for i, wnd := range ui.windows {
-		if wnd.ID == wndToRemove.ID {
-			if i == length-1 {
-				if length == 1 {
-					ui.windows = ui.windows[:0]
-				} else {
-					ui.windows = ui.windows[:i]
-				}
-			} else {
-				ui.windows = append(ui.windows[:i], ui.windows[i+1:]...)
-			}
+// GetWindowsByFilter returns a slice of *Window which is populated by
+// filtering the internal window list with the function provided.
+// If the function returns true the window will get included in the results.
+func (ui *Manager) GetWindowsByFilter(filter func(w *Window) bool) []*Window {
+	results := []*Window{}
+	for _, wnd := range ui.windows {
+		if filter(wnd) {
+			results = append(results, wnd)
 		}
 	}
+
+	return results
+}
+
+// RemoveWindow will remove the window from the user interface.
+func (ui *Manager) RemoveWindow(wndToRemove *Window) {
+	filtered := ui.windows[:0]
+	for _, wnd := range ui.windows {
+		if wnd.ID != wndToRemove.ID {
+			filtered = append(filtered, wnd)
+		}
+	}
+	ui.windows = filtered
 }
 
 // NewFont loads the font from a file and 'registers' it with the UI manager.
