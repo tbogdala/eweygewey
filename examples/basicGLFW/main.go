@@ -290,10 +290,11 @@ func main() {
 	// create a 2x2x2 cube to render
 	const cubeRadsPerSec = math.Pi / 4.0
 	cube := fizzle.CreateCube(-1, -1, -1, 1, 1, 1)
-	cube.Core.Shader = diffuseShader
-	cube.Core.DiffuseColor = mgl.Vec4{0.9, 0.05, 0.05, 1.0}
-	cube.Core.SpecularColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
-	cube.Core.Shininess = 4.8
+	cube.Material = fizzle.NewMaterial()
+	cube.Material.Shader = diffuseShader
+	cube.Material.DiffuseColor = mgl.Vec4{0.9, 0.05, 0.05, 1.0}
+	cube.Material.SpecularColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
+	cube.Material.Shininess = 4.8
 
 	// setup the camera to look at the cube
 	camera := fizzle.NewOrbitCamera(mgl.Vec3{0, 0, 0}, math.Pi/2.0, 5.0, math.Pi/2.0)
