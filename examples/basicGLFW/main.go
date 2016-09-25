@@ -271,17 +271,14 @@ func main() {
 	defer renderer.Destroy()
 
 	// put a light in there
-	light := renderer.NewLight()
-	light.DiffuseColor = mgl.Vec4{1.0, 1.0, 1.0, 1.0}
-	light.Direction = mgl.Vec3{1.0, -0.5, -1.0}
+	light := renderer.NewDirectionalLight(mgl.Vec3{1.0, -0.5, -1.0})
+	light.AmbientIntensity = 0.20
 	light.DiffuseIntensity = 0.70
 	light.SpecularIntensity = 0.10
-	light.AmbientIntensity = 0.20
-	light.QuadraticAttenuation = 0.20
 	renderer.ActiveLights[0] = light
 
 	// load the diffuse shader
-	diffuseShader, err := fizzle.LoadShaderProgramFromFiles("../assets/diffuse", nil)
+	diffuseShader, err := forward.CreateBasicShader()
 	if err != nil {
 		panic("Failed to compile and link the diffuse shader program!\n" + err.Error())
 	}
