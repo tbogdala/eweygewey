@@ -1,7 +1,8 @@
 Version v0.3.0
 ==============
 
-* MISC: Changes required for v0.3.0 of github.com/tbogdala/fizzle
+* MISC: Changes required for v0.3.0 of github.com/tbogdala/fizzle inclusing using
+  the new Material type and the new built-in shaders.
 
 Version v0.2.0
 ==============
