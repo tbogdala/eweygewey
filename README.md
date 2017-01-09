@@ -1,8 +1,8 @@
-EweyGewey v0.2.0
+EweyGewey v0.3.0
 ================
 
-EweyGewey is an OpenGL GUI library written in the [Go][golang] programming language
-that is designed to be integrated easily into an OpenGL application.
+EweyGewey is an OpenGL immediate-mode GUI library written in the [Go][golang] programming 
+language that is designed to be integrated easily into an OpenGL application.
 
 The design of the library is heavily inspired by [imgui][imgui].
 

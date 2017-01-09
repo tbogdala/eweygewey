@@ -1,5 +1,10 @@
-Changes since v0.1.0
-====================
+Version v0.3.0
+==============
+
+* MISC: Changes required for v0.3.0 of github.com/tbogdala/fizzle
+
+Version v0.2.0
+==============
 
 * BUG: Fixed Manager.RemoveWindow() bug with indexing a slice incorrectly.
 * BUG: Fixed editboxes with too long of text overflowing the widget.
