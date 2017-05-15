@@ -34,6 +34,11 @@ func newCmdList() *cmdList {
 // AddFaces takes the raw vertex attribute data in a float slice as well as the
 // element indexes and adds it to the internal buffers for rendering.
 func (cmds *cmdList) AddFaces(comboFloats []float32, indexInts []uint32, faceCount uint32) {
+	// sanity check the input
+	if faceCount < 1 || len(comboFloats) == 0 || len(indexInts) == 0 {
+		return
+	}
+
 	cmds.comboBuffer = append(cmds.comboBuffer, comboFloats...)
 
 	// manually adjust each index so that they don't collide with

@@ -313,7 +313,7 @@ func (f *Font) CreateText(pos mgl.Vec3, color mgl.Vec4, msg string) TextRenderDa
 	return f.CreateTextAdv(pos, color, -1.0, -1, -1, msg)
 }
 
-// CreateText makes a new renderable object from the supplied string
+// CreateTextAdv makes a new renderable object from the supplied string
 // using the data in the font. The string returned will be the maximum amount of the msg that fits
 // the specified maxWidth (if greater than 0.0) starting at the charOffset specified.
 // The data is returned as a TextRenderData object.
@@ -325,6 +325,17 @@ func (f *Font) CreateTextAdv(pos mgl.Vec3, color mgl.Vec4, maxWidth float32, cha
 	// sanity checks
 	originalLen := len(msg)
 	trimmedMsg := msg
+	if originalLen == 0 {
+		return TextRenderData{
+			ComboBuffer:         nil,
+			IndexBuffer:         nil,
+			Faces:               0,
+			Width:               0.0,
+			Height:              0.0,
+			AdvanceHeight:       0.0,
+			CursorOverflowRight: false,
+		}
+	}
 	if charOffset > 0 && charOffset < originalLen {
 		// trim the string based on incoming character offset
 		trimmedMsg = trimmedMsg[charOffset:]

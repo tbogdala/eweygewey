@@ -548,7 +548,7 @@ func (wnd *Window) Text(msg string) error {
 	// get the font for the text
 	font := wnd.Owner.GetFont(wnd.Style.FontName)
 	if font == nil {
-		return fmt.Errorf("Couldn't access font %s from the Manager.", wnd.Style.FontName)
+		return fmt.Errorf("couldn't access font %s from the Manager", wnd.Style.FontName)
 	}
 
 	// calculate the location for the widget
@@ -558,6 +558,9 @@ func (wnd *Window) Text(msg string) error {
 
 	// create the text widget itself
 	renderData := font.CreateText(pos, wnd.Style.TextColor, msg)
+	if renderData.Faces == 0 {
+		return nil
+	}
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
