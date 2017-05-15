@@ -1,3 +1,9 @@
+Version v0.3.1
+==============
+
+* BUG: Fixed issue #3 where the VBO data was getting corrupted by attempting
+  to add zero faces.
+
 Version v0.3.0
 ==============
 

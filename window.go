@@ -558,9 +558,6 @@ func (wnd *Window) Text(msg string) error {
 
 	// create the text widget itself
 	renderData := font.CreateText(pos, wnd.Style.TextColor, msg)
-	if renderData.Faces == 0 {
-		return nil
-	}
 	cmd.AddFaces(renderData.ComboBuffer, renderData.IndexBuffer, renderData.Faces)
 
 	// advance the cursor for the width of the text widget
