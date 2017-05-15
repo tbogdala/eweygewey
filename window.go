@@ -1132,6 +1132,9 @@ func (wnd *Window) Editbox(id string, value *string) (bool, error) {
 						*value = newString
 						editorState.CursorOffset--
 					}
+					if editorState.CharacterShift > 0 {
+						editorState.CharacterShift--
+					}
 				case EweyKeyDelete:
 					// erase the rune just after the cursor
 					if editorState.CursorOffset < len(*value) {

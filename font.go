@@ -264,6 +264,14 @@ func (f *Font) OffsetForIndex(msg string, stopIndex int) float32 {
 func (f *Font) OffsetForIndexAdv(msg string, charStartIndex int, stopIndex int) float32 {
 	var w float32
 
+	// sanity test the input
+	if len(msg) < 1 {
+		return 0.0
+	}
+	if charStartIndex > stopIndex {
+		return 0.0
+	}
+
 	// see how much to scale the size based on current resolution vs desgin resolution
 	fontScale := f.GetCurrentScale()
 	for i, ch := range msg[charStartIndex:] {
