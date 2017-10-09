@@ -59,12 +59,6 @@ type Font struct {
 // newFont takes a fontFilepath and uses the Go freetype library to parse it
 // and render the specified glyphs to a texture that is then buffered into OpenGL.
 func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (f *Font, e error) {
-	f = new(Font)
-	scale := fixed.I(scaleInt)
-
-	// allocate the location map
-	f.locations = make(map[rune]runeData)
-
 	// Load the font used for UI interaction
 	fontFile, err := os.Open(fontFilepath)
 	if err != nil {
@@ -77,6 +71,18 @@ func newFont(owner *Manager, fontFilepath string, scaleInt int, glyphs string) (
 	if err != nil {
 		return f, fmt.Errorf("Failed to load font data from stream.\n%v", err)
 	}
+
+	return newFontBytes(owner, fontBytes, scaleInt, glyphs)
+}
+
+// newFontBytes takes a byte slice representing the font and uses the Go freetype library to parse it
+// and render the specified glyphs to a texture that is then buffered into OpenGL.
+func newFontBytes(owner *Manager, fontBytes []byte, scaleInt int, glyphs string) (f *Font, e error) {
+	f = new(Font)
+	scale := fixed.I(scaleInt)
+
+	// allocate the location map
+	f.locations = make(map[rune]runeData)
 
 	// parse the truetype font data
 	ttfData, err := ft.ParseFont(fontBytes)

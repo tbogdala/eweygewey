@@ -1,3 +1,9 @@
+Since Version v0.3.1
+====================
+
+* New: Added Manager.NewFontBytes() to load a font by byte slice so that
+  clients can load embedded fonts.
+
 Version v0.3.1
 ==============
 

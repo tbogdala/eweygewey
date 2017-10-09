@@ -256,6 +256,18 @@ func (ui *Manager) NewFont(name string, fontFilepath string, scaleInt int, glyph
 	return f, err
 }
 
+// NewFontBytes loads the font from a byte slice and 'registers' it with the UI manager.
+func (ui *Manager) NewFontBytes(name string, fontBytes []byte, scaleInt int, glyphs string) (*Font, error) {
+	f, err := newFontBytes(ui, fontBytes, scaleInt, glyphs)
+
+	// if we succeeded, store the font with the name specified
+	if err == nil {
+		ui.fonts[name] = f
+	}
+
+	return f, err
+}
+
 // GetFont attempts to get the font by name from the Manager's collection.
 // It returns the font on success or nil on failure.
 func (ui *Manager) GetFont(name string) *Font {
