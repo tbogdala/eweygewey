@@ -168,6 +168,7 @@ func (ui *Manager) Initialize(vertShader, fragShader string, w, h, designH int32
 	// generate the VBOs
 	ui.comboVBO = ui.gfx.GenBuffer()
 	ui.indexVBO = ui.gfx.GenBuffer()
+	ui.vao = ui.gfx.GenVertexArray()
 
 	// set the resolution for the user interface
 	ui.AdviseResolution(w, h)
@@ -435,6 +436,11 @@ func (ui *Manager) bindOpenGLData(style *Style, view mgl.Mat4) {
 // Draw buffers the UI vertex data into the rendering pipeline and does
 // the actual draw call.
 func (ui *Manager) Draw() {
+	// short circuit the rendering if there are no windows to draw
+	if len(ui.windows) < 1 {
+		return
+	}
+
 	const floatSize = 4
 	const uintSize = 4
 	const posOffset = 0

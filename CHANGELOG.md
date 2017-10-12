@@ -1,6 +1,10 @@
 Since Version v0.3.1
 ====================
 
+* NEW: embeddedfonts package that embeds the Oswald-Heavy font so that the client
+  executables can be installed with `go install` and then run without having to locate
+  the font file. This was generate with `go-bindata`.
+
 * New: Added Manager.NewFontBytes() to load a font by byte slice so that
   clients can load embedded fonts.
 
