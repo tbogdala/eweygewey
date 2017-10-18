@@ -1,5 +1,5 @@
-Since Version v0.3.1
-====================
+Version v0.3.2
+==============
 
 * NEW: embeddedfonts package that embeds the Oswald-Heavy font so that the client
   executables can be installed with `go install` and then run without having to locate

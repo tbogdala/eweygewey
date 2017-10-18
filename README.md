@@ -1,4 +1,4 @@
-EweyGewey v0.3.1
+EweyGewey v0.3.2
 ================
 
 EweyGewey is an OpenGL immediate-mode GUI library written in the [Go][golang] programming 
