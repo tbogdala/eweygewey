@@ -1,7 +1,7 @@
 // Copyright 2016, Timothy Bogdala <tdb@animal-machine.com>
 // See the LICENSE file for more details.
 
-package glfw
+package glfwinput
 
 import (
 	"time"
